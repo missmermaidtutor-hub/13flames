@@ -1,0 +1,11 @@
+# Large video files — never commit these
+*.MOV
+*.mov
+*.mp4
+*.mov
+
+# macOS
+.DS_Store
+
+# Claude
+.claude/

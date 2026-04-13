@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>13 Flames</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #c9a84c;
+      --gold-glow: rgba(201,168,76,0.4);
+      --paper: #f4e4c1;
+      --ink: #2c1810;
+      --ember: #ff6b35;
+    }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      min-height: 100vh; overflow-x: hidden;
+      background: #442f29; color: #e8d5b7;
+    }
+
+    #starsCanvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+    /* ── BACKGROUNDS ──────────────────────────────── */
+    .bg-night { background: #442f29; }
+    .bg-dusk  { background: linear-gradient(175deg,#0d0428 0%,#3a1050 25%,#8c2a50 50%,#c84428 70%,#e87830 85%,#f0a050 100%); }
+    .bg-table {
+      background:
+        repeating-linear-gradient(90deg,transparent,transparent 70px,rgba(0,0,0,.04) 70px,rgba(0,0,0,.04) 71px),
+        repeating-linear-gradient(0deg,transparent,transparent 50px,rgba(0,0,0,.04) 50px,rgba(0,0,0,.04) 51px),
+        linear-gradient(135deg,#3d1e08,#6b3a1f,#4a2510,#7a4530);
+    }
+    .bg-floor {
+      background: repeating-linear-gradient(1deg,
+        #4a2c0a,#4a2c0a 80px,#3a2008 80px,#3a2008 82px,
+        #5a3510 82px,#5a3510 160px,#3a2008 160px,#3a2008 162px);
+    }
+
+    /* ── APP SHELL ────────────────────────────────── */
+    .app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── HEADER ───────────────────────────────────── */
+    header { text-align: center; padding: 2.5rem 1rem 1.5rem; position: relative; }
+    .title {
+      font-size: clamp(2rem,6vw,4rem); color: var(--gold);
+      letter-spacing: 6px; font-variant: small-caps;
+      text-shadow: 0 0 30px var(--gold-glow), 0 0 60px rgba(201,168,76,.2);
+    }
+    .subtitle { margin-top:.5rem; font-style:italic; font-size:.9rem; color:rgba(232,213,183,.82); letter-spacing:1px; }
+    .phase-badge {
+      display:inline-block; margin-top:.75rem; padding:.2rem .9rem;
+      border:1px solid var(--gold); border-radius:20px;
+      font-size:.72rem; letter-spacing:2px; color:var(--gold); text-transform:uppercase;
+    }
+
+    /* Top-right cluster: counter + gear */
+    .tr-cluster {
+      position: absolute; top: 1.2rem; right: 1.2rem;
+      display: flex; flex-direction: column; align-items: center; gap: .4rem;
+    }
+    .day-counter {
+      text-align: center;
+      background: rgba(201,168,76,.1);
+      border: 1px solid rgba(201,168,76,.35);
+      border-radius: 8px;
+      padding: .35rem .7rem;
+      min-width: 72px;
+    }
+    .counter-num {
+      display: block; font-size: 1.8rem; line-height: 1;
+      color: var(--gold);
+      text-shadow: 0 0 12px var(--gold-glow);
+    }
+    .counter-label { font-size: .52rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(232,213,183,.82); line-height: 1.4; }
+    .settings-btn {
+      background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.4);
+      color: var(--gold); width: 36px; height: 36px;
+      border-radius: 50%; cursor: pointer; font-size: 1rem; transition: background .2s;
+    }
+    .settings-btn:hover { background: rgba(201,168,76,.3); }
+
+    /* ── WRITING PHASE ────────────────────────────── */
+    .writing-phase { flex:1; display:flex; flex-direction:column; align-items:center; padding:1rem 1.5rem 3rem; }
+    .papers-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:1.25rem; max-width:860px; width:100%; }
+    .progress-text { margin-bottom:1.5rem; font-size:.85rem; color:rgba(232,213,183,.82); letter-spacing:1px; }
+
+    /* ── PAPER CARD ───────────────────────────────── */
+    .paper-card { height:180px; perspective:800px; cursor:pointer; position:relative; }
+    .paper-card:hover .paper-face { box-shadow:0 8px 30px rgba(0,0,0,.7),0 0 15px rgba(201,168,76,.2); transform:translateY(-3px); }
+    .paper-card.locked { cursor:default; }
+    .paper-card.locked:hover .paper-face { transform:none; box-shadow:2px 4px 12px rgba(0,0,0,.6); }
+    .paper-card.burned { cursor:default; opacity:.32; pointer-events:none; }
+
+    .paper-face {
+      width:100%; height:100%; border-radius:2px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:1rem; text-align:center;
+      transition:box-shadow .2s, transform .2s;
+      box-shadow:2px 4px 12px rgba(0,0,0,.6);
+      position:relative; overflow:hidden;
+      background: var(--paper);
+      background-image:
+        linear-gradient(rgba(255,255,255,.15) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);
+      background-size:20px 20px;
+    }
+    .paper-face::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(255,255,255,.12) 0%,transparent 60%); pointer-events:none; }
+    .paper-num { position:absolute; top:7px; right:9px; font-size:.65rem; color:rgba(44,24,16,.72); font-style:italic; }
+    .paper-icon { font-size:1.8rem; opacity:.25; color:var(--ink); }
+    .paper-label { font-size:.7rem; color:var(--ink); opacity:.72; margin-top:.4rem; }
+    .paper-preview { font-size:.68rem; color:var(--ink); opacity:.78; margin-top:.3rem; line-height:1.4; max-height:60px; overflow:hidden; font-style:italic; }
+
+    .paper-card.written .paper-face { background-color:#ecdba8; }
+    .paper-card.written .paper-icon { opacity:.5; }
+
+    .paper-card.folded .paper-face {
+      background:linear-gradient(135deg,#c49055,#a87040,#c49055,#b8804a);
+      background-image:none;
+    }
+    .paper-card.folded .paper-face::before {
+      content:''; position:absolute; top:50%; left:0; right:0;
+      height:2px; background:rgba(0,0,0,.15); transform:translateY(-50%);
+    }
+    .paper-card.sealed .paper-face { background:linear-gradient(145deg,#6b3010,#4a1e08,#7a3818); background-image:none; }
+    .seal-svg { width:62px; height:62px; }
+
+    /* kept for fallback, no longer used on cards */
+    .folding { opacity: 0; transition: opacity .3s; }
+
+    /* ── PAPER FOLD OVERLAY ───────────────────────── */
+    #foldOverlay {
+      position: fixed; inset: 0; z-index: 450;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(5,10,26,.88);
+      perspective: 1600px;
+    }
+    .fold-wrap {
+      width: 320px; height: 420px;
+      position: relative;
+      transform-style: preserve-3d;
+    }
+    /* Shared paper texture */
+    .fold-face {
+      position: absolute; inset: 0;
+      background: #f4e4c1;
+      background-image:
+        repeating-linear-gradient(transparent, transparent 27px, rgba(180,140,100,.35) 27px, rgba(180,140,100,.35) 28px);
+    }
+    /* TOP half */
+    .fold-top-half {
+      position: absolute; top: 0; left: 0; right: 0; height: 210px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,.45);
+    }
+    .fold-top-half .fold-face {
+      padding: 1.8rem 1.6rem .5rem 3rem;
+    }
+    /* Margin red line */
+    .fold-top-half .fold-face::before {
+      content: ''; position: absolute;
+      left: 46px; top: 0; bottom: 0;
+      width: 1.5px; background: rgba(200,100,100,.3);
+    }
+    /* BOTTOM half — the part that folds */
+    .fold-bot-half {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 210px;
+      transform-origin: top center;
+      transform-style: preserve-3d;
+      box-shadow: 0 4px 20px rgba(0,0,0,.45);
+    }
+    /* Front face of bottom half (paper text) */
+    .fold-bot-front {
+      position: absolute; inset: 0;
+      overflow: hidden;
+      backface-visibility: hidden;
+    }
+    .fold-bot-front .fold-face {
+      padding: .5rem 1.6rem 1.8rem 3rem;
+    }
+    .fold-bot-front .fold-face::before {
+      content: ''; position: absolute;
+      left: 46px; top: 0; bottom: 0;
+      width: 1.5px; background: rgba(200,100,100,.3);
+    }
+    /* Back face of bottom half (underside of paper — slightly darker) */
+    .fold-bot-back {
+      position: absolute; inset: 0;
+      background: #e2cfa0;
+      backface-visibility: hidden;
+      transform: rotateX(180deg);
+    }
+    /* Shadow at the fold crease */
+    .fold-crease {
+      position: absolute; left: 0; right: 0; top: 210px; height: 3px;
+      background: linear-gradient(to bottom, rgba(0,0,0,.18), transparent);
+      z-index: 5; pointer-events: none;
+    }
+    /* Text inside the paper */
+    .fold-text {
+      font-family: 'Georgia', serif;
+      font-size: .84rem; line-height: 28px;
+      color: #2c1810; font-style: italic; opacity: .75;
+      white-space: pre-wrap; overflow: hidden;
+    }
+    /* Final fly-to-box of the whole folded paper — transform set by JS */
+    .fold-wrap.shrink-away {
+      transition: transform .85s cubic-bezier(.4,0,.6,1), opacity .6s ease-in;
+    }
+    /* Box glow when paper lands — applied to .box-body */
+    @keyframes boxFlash {
+      0%   { box-shadow: 0 8px 28px rgba(0,0,0,.8); }
+      35%  { box-shadow: 0 0 40px rgba(201,168,76,.9), 0 0 80px rgba(201,168,76,.3), inset 0 0 20px rgba(201,168,76,.15); }
+      100% { box-shadow: 0 8px 28px rgba(0,0,0,.8); }
+    }
+    .box-body.box-flash { animation: boxFlash .9s ease forwards; }
+
+    @keyframes sealPop {
+      0%   { transform:scale(0) rotate(-20deg); opacity:0; }
+      70%  { transform:scale(1.15) rotate(3deg); opacity:1; }
+      100% { transform:scale(1) rotate(0deg); opacity:1; }
+    }
+    .seal-pop { animation:sealPop .6s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+    /* ── BURNING PHASE ────────────────────────────── */
+    .burning-phase { flex:1; display:flex; flex-direction:column; align-items:center; padding:1rem 1.5rem 2rem; }
+    .burn-instruction { font-size:.82rem; color:rgba(232,213,183,.88); letter-spacing:1px; font-style:italic; margin-bottom:.75rem; text-align:center; transition:color .4s; }
+    .burn-instruction.locked-today { color:rgba(255,148,108,1); }
+
+    /* Fire drop zone */
+    .fire-drop-zone { position:relative; padding:1.5rem; border-radius:50%; transition:background .3s; }
+    .fire-drop-zone.drag-over { background:radial-gradient(circle,rgba(255,100,20,.2) 0%,transparent 70%); }
+    .fire-drop-zone.drag-over .drop-ring { opacity:1; transform:scale(1); }
+    .drop-ring {
+      position:absolute; inset:0; border-radius:50%;
+      border:2px dashed rgba(255,140,30,.55);
+      opacity:0; transform:scale(.88);
+      transition:opacity .25s, transform .25s; pointer-events:none;
+    }
+    /* Dim drop zone when locked today */
+    .fire-drop-zone.burn-locked { opacity:.55; pointer-events:none; }
+
+    /* Fire container */
+    .fire-container { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:220px; height:280px; position:relative; }
+
+    /* Campfire */
+    .campfire { position:relative; width:220px; height:260px; }
+    .cf-stones { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:150px; height:24px; background:radial-gradient(ellipse,#666 30%,#3a3a3a 100%); border-radius:50%; box-shadow:0 4px 12px rgba(0,0,0,.6); }
+    .cf-log { position:absolute; bottom:14px; left:50%; transform-origin:center; width:120px; height:16px; background:linear-gradient(to right,#3d1a05,#7a4520,#3d1a05); border-radius:8px; box-shadow:0 3px 8px rgba(0,0,0,.5); }
+    .cf-log-1 { transform:translateX(-50%) rotate(25deg); }
+    .cf-log-2 { transform:translateX(-50%) rotate(-25deg); }
+    .cf-embers { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); width:70px; height:16px; background:radial-gradient(ellipse,#ff4500 0%,#ff8c00 50%,transparent 100%); border-radius:50%; filter:blur(5px); animation:emberGlow 1.2s ease-in-out infinite alternate; }
+    @keyframes emberGlow { 0%{opacity:.7;} 100%{opacity:1;} }
+
+    /* Real fire video — screen blend drops black, leaves only flame colours */
+    .cf-video {
+      position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+      width:220px; height:230px;
+      object-fit:cover;
+      mix-blend-mode:screen;
+      border-radius:40% 40% 10% 10%;
+      pointer-events:none;
+    }
+
+    /* CSS flame fallback (hidden when video loads) */
+    .cf-flame-wrap { position:absolute; bottom:22px; left:50%; transform:translateX(-50%); width:80px; height:140px; }
+    .cf-flame { position:absolute; bottom:0; left:50%; transform:translateX(-50%); border-radius:50% 50% 20% 20%; filter:blur(6px); transform-origin:bottom center; }
+    .cf-flame-1 { width:70px; height:130px; background:linear-gradient(to top,#ff4500,#ff8c00,#ffcc00,rgba(255,220,0,0)); animation:flicker1 .4s ease-in-out infinite alternate; }
+    .cf-flame-2 { width:50px; height:100px; background:linear-gradient(to top,#ff6500,#ffa500,rgba(255,200,0,0)); animation:flicker2 .5s ease-in-out infinite alternate; }
+    .cf-flame-3 { width:35px; height:70px;  background:linear-gradient(to top,#ffcc00,#fff0a0,rgba(255,255,255,0)); animation:flicker3 .35s ease-in-out infinite alternate; }
+    @keyframes flicker1 { 0%{transform:translateX(-50%) scaleX(1) scaleY(1) rotate(-2deg);} 100%{transform:translateX(-50%) scaleX(.88) scaleY(1.06) rotate(2deg);} }
+    @keyframes flicker2 { 0%{transform:translateX(-50%) scaleX(.95) scaleY(1.05) rotate(3deg);} 100%{transform:translateX(-50%) scaleX(1.05) scaleY(.95) rotate(-3deg);} }
+    @keyframes flicker3 { 0%{transform:translateX(-50%) scaleX(1) scaleY(1) rotate(1deg);} 100%{transform:translateX(-50%) scaleX(.9) scaleY(1.1) rotate(-1deg);} }
+    .cf-particles { position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:80px; height:180px; pointer-events:none; }
+    .particle { position:absolute; border-radius:50%; background:var(--ember); animation:riseUp 2s ease-in infinite; opacity:0; }
+    @keyframes riseUp { 0%{transform:translateY(0) translateX(0) scale(1); opacity:.9;} 60%{opacity:.6;} 100%{transform:translateY(-160px) translateX(var(--drift)) scale(0); opacity:0;} }
+
+    @keyframes flare { 0%{transform:translateX(-50%) scaleX(1) scaleY(1);} 30%{transform:translateX(-50%) scaleX(1.4) scaleY(1.5); filter:blur(5px) brightness(1.5);} 100%{transform:translateX(-50%) scaleX(1) scaleY(1); filter:blur(6px);} }
+    .fire-flare .cf-flame-1 { animation:flare .9s ease forwards !important; }
+
+    /* ── BURN SEQUENCE (3.4s: warm → edges inward → center burst → crumble → smoke) ── */
+    @keyframes burnFull {
+      0%   { transform:translate(-50%,-60%) scale(1) rotate(0deg);      filter:none;                                  opacity:1; }
+      11%  { transform:translate(-50%,-73%) scale(1.02) rotate(-1deg);  filter:sepia(.4) brightness(1.3);             opacity:1; }
+      /* hold while edges burn inward */
+      62%  { transform:translate(-50%,-75%) scale(1.0) rotate(0.5deg);  filter:sepia(.95) brightness(.8);             opacity:1; }
+      /* crumble */
+      76%  { transform:translate(-50%,-84%) scale(.83) rotate(-5deg);   filter:sepia(1) brightness(.48) blur(1px);    opacity:.82; }
+      91%  { transform:translate(-50%,-100%) scale(.42) rotate(-13deg); filter:sepia(1) brightness(.2) blur(6px);     opacity:.22; }
+      100% { transform:translate(-50%,-115%) scale(.12) rotate(-18deg); filter:sepia(1) brightness(.08) blur(10px);   opacity:0; }
+    }
+    /* Char grows from all four edges inward — box-shadow spread does this naturally */
+    @keyframes charEdgeInward {
+      0%   { box-shadow: inset 0 0 0px  0px rgba(10,5,0,0),
+                         inset 0 0 0px  0px rgba(255,130,0,0),
+                         inset 0 0 0px  0px rgba(255,60,0,0); }
+      5%   { box-shadow: inset 0 0 2px  3px rgba(10,5,0,.92),
+                         inset 0 0 14px  5px rgba(255,165,20,1),
+                         inset 0 0 24px  6px rgba(255,75,0,.7); }
+      38%  { box-shadow: inset 0 0 2px 17px rgba(10,4,0,.97),
+                         inset 0 0 12px 19px rgba(255,148,12,.94),
+                         inset 0 0 22px 22px rgba(255,60,0,.62); }
+      70%  { box-shadow: inset 0 0 2px 30px rgba(8,3,0,.99),
+                         inset 0 0 10px 32px rgba(210,95,0,.84),
+                         inset 0 0 18px 35px rgba(155,42,0,.44); }
+      88%  { box-shadow: inset 0 0 1px 38px rgba(5,2,0,1),
+                         inset 0 0  7px 39px rgba(135,52,0,.56),
+                         inset 0 0 14px 41px rgba(85,22,0,.22); }
+      100% { box-shadow: inset 0 0 0px 46px rgba(3,1,0,1),
+                         inset 0 0  4px 46px rgba(65,22,0,.1); }
+    }
+    /* Final amber pulse when edges converge at center */
+    @keyframes centerBurst {
+      0%   { opacity:0; transform:translate(-50%,-50%) scale(.1); filter:blur(2px); }
+      25%  { opacity:1; transform:translate(-50%,-50%) scale(1.6); filter:blur(5px); }
+      65%  { opacity:.85; transform:translate(-50%,-50%) scale(2.4); filter:blur(8px); }
+      100% { opacity:0; transform:translate(-50%,-50%) scale(1.2); filter:blur(14px); }
+    }
+    @keyframes smokeRise {
+      0%   { transform:translateY(0) translateX(0) scale(.5);                opacity:.74; filter:blur(5px); }
+      18%  { opacity:.58; filter:blur(10px); }
+      42%  { opacity:.38; }
+      100% { transform:translateY(-220px) translateX(var(--drift)) scale(4.2); opacity:0; filter:blur(32px); }
+    }
+    .burn-flash { position:absolute; width:72px; height:52px; left:50%; top:50%; transform:translate(-50%,-60%); pointer-events:none; z-index:10; animation:burnFull 3400ms ease-in-out forwards; }
+    .burn-flash .env-body { box-shadow:none; }
+    .burn-char {
+      position:absolute; inset:0;
+      background:transparent; border-radius:3px; z-index:4; pointer-events:none;
+      animation:charEdgeInward 2000ms ease-in forwards 380ms;
+    }
+    .burn-ember {
+      position:absolute; left:50%; top:50%; width:24px; height:16px;
+      background:radial-gradient(ellipse, rgba(255,160,10,1) 0%, rgba(255,80,0,.7) 45%, transparent 100%);
+      border-radius:50%; z-index:6; pointer-events:none;
+      filter:blur(3px); opacity:0;
+      animation:centerBurst 750ms ease-in-out forwards 2100ms;
+    }
+    .smoke-wisp {
+      position:fixed; width:var(--size); height:var(--size); border-radius:50%;
+      background:radial-gradient(circle, rgba(185,170,152,.78) 0%, rgba(145,130,115,.45) 45%, transparent 100%);
+      pointer-events:none; z-index:999; opacity:0;
+      animation:smokeRise var(--dur) ease-out var(--delay) forwards;
+    }
+
+    /* ── CANDLE ──────────────────────────────────────── */
+    .candle-scene { position:relative; width:180px; height:260px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
+
+
+    /* Candlestick — bare video scene, no body */
+    .candlestick-scene {
+      position:relative; width:180px; height:260px;
+      display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    }
+    .candlestick-video {
+      position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+      width:160px; height:240px;
+      object-fit:contain;
+      object-position:center bottom;
+      mix-blend-mode:screen;
+      pointer-events:none;
+    }
+
+    .candle-body {
+      width:46px; border-radius:5px 5px 3px 3px; position:relative;
+      box-shadow:
+        inset -10px 0 18px rgba(0,0,0,.30),
+        inset  6px 0 12px rgba(255,255,255,.13),
+        0 8px 24px rgba(0,0,0,.55);
+    }
+    /* Cylindrical sheen */
+    .candle-body::before {
+      content:''; position:absolute; inset:0; border-radius:5px 5px 3px 3px; pointer-events:none;
+      background:linear-gradient(to right,
+        rgba(255,255,255,.16) 0%,
+        rgba(255,255,255,.26) 16%,
+        transparent 42%,
+        rgba(0,0,0,.08) 72%,
+        rgba(0,0,0,.22) 100%);
+    }
+    /* Wax melt pool at top */
+    .candle-body::after {
+      content:''; position:absolute; top:-3px; left:50%; transform:translateX(-50%);
+      width:40px; height:12px;
+      background:radial-gradient(ellipse, rgba(255,255,255,.5) 0%, rgba(255,255,255,.12) 60%, transparent 100%);
+      border-radius:50%; filter:blur(2px);
+    }
+    /* Wax drips */
+    .candle-drip { position:absolute; top:0; border-radius:0 0 6px 6px; filter:brightness(1.18); }
+    .candle-drip-1 { left:7px;  width:8px; height:32px; }
+    .candle-drip-2 { right:9px; width:6px; height:20px; top:6px; filter:brightness(1.10); }
+    .candle-drip::after {
+      content:''; position:absolute; inset:0; border-radius:0 0 6px 6px;
+      background:linear-gradient(to right, rgba(255,255,255,.18) 0%, transparent 60%);
+    }
+
+    /* Wick — inside candle-body, slightly curved */
+    .candle-wick {
+      position:absolute; top:-12px; left:50%;
+      transform:translateX(-50%) rotate(-5deg);
+      width:2px; height:12px;
+      background:linear-gradient(to top,#5c3018,#1c0a04);
+      border-radius:1px 1px 0 0;
+    }
+    /* Glowing wick tip */
+    .candle-wick::after {
+      content:''; position:absolute; top:-3px; left:50%; transform:translateX(-50%);
+      width:5px; height:5px;
+      background:radial-gradient(circle, rgba(255,100,0,.85) 0%, transparent 100%);
+      border-radius:50%; filter:blur(1px);
+    }
+
+    /* Flame wrap — INSIDE candle-body, sits just above body top */
+    .candle-flame-wrap {
+      position:absolute; bottom:calc(100% - 4px); left:50%; transform:translateX(-50%);
+      width:60px; height:110px;
+      overflow:visible;
+    }
+
+    /* Halo — lives in candle-body, behind flame-wrap; covers video + top 20% of candle */
+    .candle-halo {
+      position:absolute;
+      top:-160px;            /* extends up into the video/flame area */
+      left:50%; transform:translateX(-50%);
+      width:180px; height:220px; border-radius:50%;
+      background:radial-gradient(ellipse,
+        rgba(138,86,38,.78) 0%,
+        rgba(138,86,38,.45) 32%,
+        rgba(138,86,38,.15) 58%,
+        transparent 75%);
+      filter:blur(16px);
+      animation:glowPulse 1.8s ease-in-out infinite alternate;
+      pointer-events:none;
+      z-index:1;             /* behind flame-wrap which is z-index:2 */
+    }
+
+    /* Real candle video — screen blend removes dark background */
+    .candle-video {
+      position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+      width:60px; height:110px;
+      object-fit:contain;
+      object-position:center bottom;
+      border-radius:40% 40% 20% 20%;
+      mix-blend-mode:screen;
+      pointer-events:none; z-index:3;
+    }
+
+    /* Halo — 75% of 572px = 429px, centered at candle body top */
+    .candle-bg-circle {
+      position:absolute;
+      bottom:-72px; left:50%; transform:translateX(-50%);
+      width:429px; height:429px; border-radius:50%;
+      background:radial-gradient(circle,
+        rgba(142,81,39,.82)  0%,
+        rgba(138,78,39,.58) 22%,
+        rgba(133,76,40,.36) 44%,
+        rgba(129,75,42,.18) 64%,
+        rgba(129,75,42,.06) 82%,
+        rgba(129,75,42,.01) 100%);
+      filter:blur(18px);
+      pointer-events:none; z-index:0;
+      animation:ambientGlow 2s ease-in-out infinite alternate;
+    }
+
+    /* Ambient glow at flame level */
+    .candle-glow {
+      position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
+      width:120px; height:120px; border-radius:50%;
+      background:radial-gradient(circle,
+        rgba(142,81,39,.70) 0%,
+        rgba(135,78,40,.32) 42%,
+        rgba(129,75,42,.08) 68%,
+        transparent 82%);
+      filter:blur(16px);
+      animation:ambientGlow 2s ease-in-out infinite alternate; pointer-events:none; z-index:0;
+    }
+    @keyframes ambientGlow {
+      0%   { filter:blur(16px) brightness(.88); }
+      100% { filter:blur(20px) brightness(1.14); }
+    }
+
+    /* CSS flame fallback — hidden once video loads */
+    .candle-flame-outer {
+      position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+      width:30px; height:58px;
+      background:linear-gradient(to top,rgba(255,55,0,1) 0%,rgba(255,130,15,.95) 28%,rgba(255,210,55,.7) 58%,rgba(255,240,180,.25) 80%,transparent 100%);
+      border-radius:55% 55% 30% 30% / 72% 72% 28% 28%;
+      filter:blur(5px); transform-origin:bottom center;
+      animation:candleFlickerA .6s ease-in-out infinite alternate;
+    }
+    .candle-flame-mid {
+      position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
+      width:20px; height:46px;
+      background:linear-gradient(to top,rgba(255,125,8,1) 0%,rgba(255,200,45,.88) 42%,rgba(255,240,140,.5) 72%,transparent 100%);
+      border-radius:50% 50% 25% 25% / 70% 70% 30% 30%;
+      filter:blur(2.5px); transform-origin:bottom center;
+      animation:candleFlickerB .48s ease-in-out infinite alternate;
+    }
+    .candle-flame-inner {
+      position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+      width:12px; height:32px;
+      background:linear-gradient(to top,rgba(255,230,75,1) 0%,rgba(255,255,195,.92) 48%,rgba(255,255,240,.5) 74%,transparent 100%);
+      border-radius:50% 50% 25% 25%;
+      filter:blur(1.5px); transform-origin:bottom center;
+      animation:candleFlickerA .4s ease-in-out infinite alternate-reverse;
+    }
+    .candle-flame-core {
+      position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
+      width:5px; height:20px;
+      background:linear-gradient(to top,rgba(255,255,215,.95) 0%,rgba(255,255,255,.85) 50%,transparent 100%);
+      border-radius:50%; filter:blur(.8px); transform-origin:bottom center;
+      animation:candleFlickerB .35s ease-in-out infinite alternate-reverse;
+    }
+    .candle-css-flames { display:contents; } /* wrapper to hide all at once */
+
+    @keyframes candleFlickerA {
+      0%  { transform:translateX(-50%) scaleX(1)   scaleY(1)    rotate(-2.5deg); }
+      100%{ transform:translateX(-50%) scaleX(.82) scaleY(1.09) rotate(2.5deg); }
+    }
+    @keyframes candleFlickerB {
+      0%  { transform:translateX(-50%) scaleX(.95) scaleY(1.04) rotate(2deg); }
+      100%{ transform:translateX(-50%) scaleX(1.06) scaleY(.95) rotate(-2deg); }
+    }
+    @keyframes glowPulse { 0%{opacity:.5;} 100%{opacity:1;} }
+    .saucer { width:74px; height:13px; background:linear-gradient(to right,#7a5810,#c9a030,#8b6914,#c9a030,#7a5810); border-radius:50% 50% 30% 30%; box-shadow:0 5px 14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12); }
+
+    /* ── ENVELOPES ────────────────────────────────── */
+    .paper-strip { display:flex; flex-wrap:wrap; gap:1rem; justify-content:center; max-width:680px; padding:0; margin:0; }
+
+    /* Row that holds the box on the left and envelopes on the right */
+    .burn-row {
+      display:flex; flex-direction:row; align-items:flex-start;
+      gap:1.5rem; width:100%; max-width:900px;
+      justify-content:center; margin-top:1.5rem; padding:0 1rem;
+    }
+    .burn-row .box-section { margin:0; flex-shrink:0; }
+
+    .envelope { width:90px; height:66px; position:relative; cursor:grab; user-select:none; -webkit-user-select:none; transition:transform .2s, filter .2s, opacity .3s; }
+    .envelope:hover   { transform:translateY(-6px) scale(1.1); filter:drop-shadow(0 8px 14px rgba(0,0,0,.8)) drop-shadow(0 0 8px rgba(201,168,76,.25)); }
+    .envelope:active  { cursor:grabbing; }
+    .envelope.burned  { opacity:.18; pointer-events:none; cursor:default; }
+    .envelope.dragging { opacity:.35; transform:scale(.93); }
+    /* Locked today — can't drag */
+    .envelope.no-burn { cursor:not-allowed; }
+    .envelope.no-burn:hover { transform:none; filter:none; }
+
+    /* Last paper available for early reveal on Jan 1 */
+    .envelope.last-paper {
+      cursor: pointer;
+      animation: lastGlow 2s ease-in-out infinite alternate;
+    }
+    .envelope.last-paper:hover { transform:translateY(-8px) scale(1.15); }
+    @keyframes lastGlow {
+      0%   { filter: drop-shadow(0 0 6px rgba(201,168,76,.4)); }
+      100% { filter: drop-shadow(0 0 18px rgba(201,168,76,.85)) drop-shadow(0 0 8px rgba(255,180,50,.5)); }
+    }
+    .env-reveal-label {
+      position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+      font-size: .52rem; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--gold); white-space: nowrap; pointer-events: none;
+    }
+
+    .env-body {
+      position:absolute; bottom:0; left:0; right:0; height:58px;
+      background:linear-gradient(160deg,#d4a85a,#a87038,#c49050);
+      border-radius:2px 2px 3px 3px;
+      box-shadow:1px 4px 12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.14);
+      display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    .env-body::before {
+      content:''; position:absolute; inset:0;
+      background:
+        linear-gradient(to bottom right,transparent 49.2%,rgba(0,0,0,.10) 49.2%,rgba(0,0,0,.10) 50.8%,transparent 50.8%),
+        linear-gradient(to bottom left, transparent 49.2%,rgba(0,0,0,.10) 49.2%,rgba(0,0,0,.10) 50.8%,transparent 50.8%);
+    }
+    .env-flap { position:absolute; top:0; left:0; width:0; height:0; border-left:45px solid transparent; border-right:45px solid transparent; border-top:26px solid #8a5c20; filter:drop-shadow(0 2px 2px rgba(0,0,0,.25)); z-index:2; }
+    .env-seal-wrap { position:relative; z-index:3; margin-top:-6px; }
+    .env-num { position:absolute; bottom:3px; right:6px; font-size:.54rem; color:rgba(232,213,183,.78); font-style:italic; z-index:4; }
+
+    /* ── REVEAL PHASE ─────────────────────────────── */
+    .reveal-phase { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem; }
+    .reveal-paper {
+      width:min(540px,100%); background:var(--paper);
+      background-image:repeating-linear-gradient(transparent,transparent 27px,rgba(180,140,100,.35) 27px,rgba(180,140,100,.35) 28px);
+      border-radius:3px; padding:3rem 3rem 3rem 4.5rem; position:relative;
+      box-shadow:0 20px 60px rgba(0,0,0,.8); color:var(--ink); animation:paperUnfold .8s ease forwards;
+    }
+    .reveal-paper::before { content:''; position:absolute; left:65px; top:0; bottom:0; width:2px; background:rgba(200,100,100,.35); }
+    @keyframes paperUnfold { 0%{transform:perspective(600px) rotateX(-90deg) scaleY(.3); opacity:0;} 100%{transform:perspective(600px) rotateX(0deg) scaleY(1); opacity:1;} }
+    .reveal-header { font-size:.75rem; letter-spacing:2px; text-transform:uppercase; opacity:.78; margin-bottom:1.5rem; }
+    .reveal-text   { font-size:1.05rem; line-height:1.8; font-style:italic; }
+    .reveal-task   { margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid rgba(44,24,16,.2); }
+    .reveal-task-label { font-size:.75rem; letter-spacing:2px; text-transform:uppercase; opacity:.78; margin-bottom:.5rem; }
+    .reveal-task-text  { font-size:.95rem; line-height:1.7; }
+
+    /* ── MODALS ───────────────────────────────────── */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:200; display:flex; align-items:center; justify-content:center; padding:1rem; opacity:0; pointer-events:none; transition:opacity .3s ease; }
+    .modal-overlay.open { opacity:1; pointer-events:all; }
+
+    .writing-modal-box {
+      width:min(580px,100%); background:var(--paper);
+      background-image:repeating-linear-gradient(transparent,transparent 27px,rgba(180,140,100,.35) 27px,rgba(180,140,100,.35) 28px);
+      border-radius:3px; padding:2.5rem 2.5rem 2.5rem 4.5rem;
+      position:relative; box-shadow:0 20px 60px rgba(0,0,0,.9); max-height:88vh; overflow-y:auto;
+    }
+    .writing-modal-box::before { content:''; position:absolute; left:65px; top:0; bottom:0; width:2px; background:rgba(200,100,100,.35); }
+    .writing-modal-box h2 { font-size:1rem; color:var(--ink); opacity:.78; font-style:italic; margin-bottom:1.2rem; letter-spacing:1px; }
+    .writing-modal-box textarea { width:100%; min-height:280px; background:transparent; border:none; outline:none; resize:vertical; font-family:'Georgia',serif; font-size:.97rem; color:var(--ink); line-height:28px; }
+    .modal-actions { display:flex; gap:.75rem; justify-content:flex-end; margin-top:1rem; }
+
+    .settings-box { width:min(440px,100%); background:#0f1828; border:1px solid rgba(201,168,76,.3); border-radius:6px; padding:2rem; box-shadow:0 20px 60px rgba(0,0,0,.9); max-height:88vh; overflow-y:auto; }
+    .settings-box h2 { color:var(--gold); font-size:1.1rem; letter-spacing:2px; font-variant:small-caps; margin-bottom:1.5rem; }
+    .settings-section { margin-bottom:1.5rem; }
+    .settings-section h3 { font-size:.8rem; letter-spacing:2px; text-transform:uppercase; color:rgba(232,213,183,.82); margin-bottom:.75rem; }
+    .option-row { display:flex; flex-wrap:wrap; gap:.5rem; }
+    .opt-btn { padding:.4rem 1rem; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); color:rgba(232,213,183,.8); border-radius:3px; cursor:pointer; font-family:'Georgia',serif; font-size:.82rem; transition:all .15s; }
+    .opt-btn:hover  { background:rgba(201,168,76,.15); border-color:rgba(201,168,76,.4); }
+    .opt-btn.active { background:rgba(201,168,76,.25); border-color:var(--gold); color:var(--gold); }
+    .color-swatch-row { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.25rem; }
+    .color-swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:border-color .15s,transform .15s; }
+    .color-swatch:hover { transform:scale(1.15); }
+    .color-swatch.active { border-color:var(--gold); transform:scale(1.15); }
+    .demo-row { margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,.1); }
+    .demo-row h3 { margin-bottom:.6rem; }
+
+    .btn { padding:.5rem 1.2rem; border:none; border-radius:3px; cursor:pointer; font-family:'Georgia',serif; font-size:.88rem; transition:all .2s; }
+    .btn-primary  { background:var(--ink); color:var(--paper); }
+    .btn-primary:hover { background:#4a2820; }
+    .btn-secondary { background:transparent; color:var(--ink); border:1px solid rgba(44,24,16,.3); }
+    .btn-gold  { background:rgba(201,168,76,.2); color:var(--gold); border:1px solid rgba(201,168,76,.4); }
+    .btn-gold:hover { background:rgba(201,168,76,.35); }
+    .btn-sm { font-size:.78rem; padding:.35rem .8rem; }
+
+    .hidden { display:none !important; }
+    .divider { border:none; border-top:1px solid rgba(201,168,76,.2); margin:1.5rem 0; }
+    .reveal-phase-info { color:rgba(232,213,183,.82); font-style:italic; font-size:.82rem; text-align:center; margin-top:1.25rem; }
+
+    /* ── FOLD BUTTON ────────────────────────────── */
+    .fold-btn {
+      margin-top: .45rem;
+      padding: .25rem .65rem;
+      background: rgba(201,168,76,.18);
+      border: 1px solid rgba(201,168,76,.45);
+      color: var(--gold);
+      border-radius: 3px;
+      cursor: pointer;
+      font-family: 'Georgia', serif;
+      font-size: .63rem;
+      letter-spacing: 1px;
+      transition: background .2s;
+      position: relative; z-index: 10;
+    }
+    .fold-btn:hover { background: rgba(201,168,76,.35); }
+
+    /* ── KEEPSAKE BOX ────────────────────────── */
+    .box-section { display:flex; flex-direction:column; align-items:center; margin:1.75rem auto 0; perspective:500px; }
+    .keepsake-box { position:relative; transform-style:preserve-3d; }
+    .box-lid {
+      width:160px; height:28px; position:relative; z-index:2;
+      background:linear-gradient(to bottom,#7a4010,#5a2e08,#6b3818);
+      border-radius:4px 4px 0 0;
+      box-shadow:0 -3px 10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);
+      transform-origin:bottom center;
+      transition:transform .9s cubic-bezier(.4,0,.2,1);
+    }
+    .box-lid.open { transform:rotateX(-115deg); }
+    .box-lid::after {
+      content:''; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:24px; height:8px;
+      background:linear-gradient(to right,#c9a030,#e8c060,#c9a030);
+      border-radius:4px;
+    }
+    .box-body {
+      width:160px; height:80px;
+      background:linear-gradient(160deg,#6b3010,#4a1e08,#7a3818);
+      border-radius:0 0 6px 6px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      box-shadow:0 8px 28px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.05);
+      position:relative; overflow:hidden;
+      transition:box-shadow .4s;
+    }
+    .box-body::before {
+      content:''; position:absolute; inset:0; border-radius:0 0 6px 6px;
+      background:linear-gradient(to bottom right,rgba(255,255,255,.04) 0%,transparent 60%);
+      pointer-events:none;
+    }
+    .box-count {
+      font-size:2rem; line-height:1; color:var(--gold);
+      text-shadow:0 0 12px var(--gold-glow); position:relative;
+    }
+    .box-label {
+      font-size:.52rem; letter-spacing:1.5px; text-transform:uppercase;
+      color:rgba(232,213,183,.82); margin-top:.25rem; position:relative;
+    }
+    .box-hint {
+      font-size:.72rem; color:rgba(232,213,183,.82); font-style:italic;
+      margin-top:.65rem; letter-spacing:.5px; text-align:center;
+    }
+
+    /* Envelope emerge animation */
+    @keyframes envEmerge {
+      0%   { opacity:0; transform:translateY(-40px) scale(.6); }
+      100% { opacity:1; transform:translateY(0) scale(1); }
+    }
+    .envelope.emerging { animation:envEmerge .55s cubic-bezier(.34,1.56,.64,1) both; }
+
+    @media (max-width:500px) {
+      .papers-grid { grid-template-columns:repeat(3,1fr); gap:.75rem; }
+      .paper-card  { height:140px; }
+      .envelope    { width:72px; height:52px; }
+      .env-body    { height:46px; }
+      .env-flap    { border-left-width:36px; border-right-width:36px; border-top-width:20px; }
+      .counter-num { font-size:1.4rem; }
+    }
+
+    /* ── PHASE NAV ──────────────────────────────── */
+    .phase-nav {
+      display:flex; align-items:center; justify-content:center;
+      gap:.5rem; padding:.1rem 0 1.4rem;
+    }
+    .phase-nav-btn {
+      background:none; border:none; cursor:pointer;
+      font-family:'Georgia',serif; font-size:.72rem;
+      letter-spacing:1.8px; text-transform:uppercase;
+      color:rgba(232,213,183,.35); padding:.2rem .5rem;
+      transition:color .25s;
+    }
+    .phase-nav-btn:hover { color:rgba(232,213,183,.7); }
+    .phase-nav-btn.nav-active { color:var(--gold); }
+    .phase-nav-sep { color:rgba(232,213,183,.18); font-size:.65rem; user-select:none; }
+
+    /* ── NOTEBOOK ───────────────────────────────── */
+    .notebook-toggle-row { margin-top:3rem; text-align:center; }
+    .notebook-toggle-btn {
+      background:none; border:none; cursor:pointer;
+      font-family:'Georgia',serif; font-size:.67rem;
+      letter-spacing:1.8px; text-transform:uppercase;
+      color:rgba(232,213,183,.28); padding:.2rem .5rem;
+      transition:color .25s;
+    }
+    .notebook-toggle-btn:hover { color:rgba(232,213,183,.55); }
+    .notebook-wrap { margin-top:.9rem; display:flex; justify-content:center; }
+    .notebook {
+      width:min(460px,92vw); background:#f5e8d0;
+      border-radius:3px 6px 6px 3px;
+      box-shadow:-5px 0 0 0 #7a4520, 0 12px 50px rgba(0,0,0,.75);
+      position:relative; overflow:hidden;
+    }
+    .nb-spine {
+      position:absolute; left:0; top:0; bottom:0; width:28px;
+      background:linear-gradient(to right,#6b3818,#8c4c28); pointer-events:none;
+    }
+    .nb-spine::after {
+      content:''; position:absolute; left:13px; top:15%; bottom:15%;
+      width:1px; background:rgba(255,255,255,.15);
+    }
+    .nb-page {
+      margin-left:28px; padding:1.75rem 1.5rem 1.25rem 1.75rem;
+      min-height:160px; position:relative;
+      background:#f4e9d0;
+      background-image:repeating-linear-gradient(
+        transparent,transparent 27px,
+        rgba(150,110,70,.2) 27px,rgba(150,110,70,.2) 28px
+      );
+      cursor:none; user-select:none;
+    }
+    .nb-page::before {
+      content:''; position:absolute; left:38px; top:0; bottom:0;
+      width:1.5px; background:rgba(200,100,100,.25);
+    }
+    .nb-rub-text {
+      font-family:'Georgia',serif; font-size:.95rem; line-height:28px;
+      color:#2c1810; padding-left:22px; min-height:84px; pointer-events:none;
+    }
+    .nb-rub-canvas {
+      position:absolute; inset:0; pointer-events:none;
+      width:100%; height:100%; opacity:1; transition:opacity 1.4s ease;
+    }
+    .nb-rub-hint {
+      position:absolute; bottom:1rem; right:1.3rem;
+      font-size:.6rem; letter-spacing:2px; text-transform:uppercase;
+      color:rgba(44,24,16,.38); pointer-events:none; transition:opacity .5s;
+    }
+    .nb-nav {
+      display:flex; align-items:center; justify-content:center;
+      gap:1.5rem; padding:.6rem 1rem;
+      border-top:1px solid rgba(44,24,16,.1); background:#ece0c4;
+    }
+    .nb-nav-btn {
+      background:none; border:1px solid rgba(44,24,16,.18);
+      color:#4a2810; width:30px; height:30px; border-radius:50%;
+      cursor:pointer; font-size:1.1rem; line-height:1;
+      transition:background .15s; display:flex; align-items:center; justify-content:center;
+    }
+    .nb-nav-btn:hover { background:rgba(44,24,16,.08); }
+    .nb-nav-btn:disabled { opacity:.28; cursor:default; pointer-events:none; }
+    .nb-page-num { font-size:.67rem; letter-spacing:1px; color:rgba(44,24,16,.5); font-style:italic; }
+    .pencil-cursor {
+      position:fixed; pointer-events:none; z-index:9999;
+      font-size:20px; line-height:1;
+      transform:translate(-3px,-18px) rotate(-20deg); display:none;
+    }
+
+    /* ── JOURNAL ────────────────────────────────── */
+    .journal-toggle-row { margin-top:1.4rem; text-align:center; }
+    .journal-toggle-btn {
+      background:none; border:none; cursor:pointer;
+      font-family:'Georgia',serif; font-size:.67rem;
+      letter-spacing:1.8px; text-transform:uppercase;
+      color:rgba(232,213,183,.28); padding:.2rem .5rem;
+      transition:color .25s;
+    }
+    .journal-toggle-btn:hover { color:rgba(232,213,183,.55); }
+    .journal-wrap {
+      margin-top:.9rem; width:min(460px,92vw);
+      border:1px solid rgba(201,168,76,.16); border-radius:4px;
+      padding:1.25rem; background:rgba(255,255,255,.03);
+    }
+    .journal-tabs { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
+    .journal-tab {
+      background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.2);
+      color:rgba(232,213,183,.52); padding:.2rem .65rem; border-radius:3px;
+      cursor:pointer; font-family:'Georgia',serif; font-size:.74rem;
+      transition:all .15s;
+    }
+    .journal-tab.active { background:rgba(201,168,76,.22); color:var(--gold); border-color:var(--gold); }
+    .journal-entry-row {
+      padding:.5rem 0; border-bottom:1px solid rgba(201,168,76,.1);
+      font-style:italic; font-size:.88rem;
+      color:rgba(232,213,183,.78); line-height:1.65;
+      display:flex; gap:.6rem;
+    }
+    .journal-entry-row:last-child { border-bottom:none; }
+    .journal-entry-n {
+      color:rgba(201,168,76,.5); font-style:normal; font-size:.7rem;
+      flex-shrink:0; padding-top:.18rem; min-width:1.3rem;
+    }
+    .journal-empty {
+      font-style:italic; color:rgba(232,213,183,.35);
+      font-size:.82rem; text-align:center; padding:.75rem 0;
+    }
+    .journal-featured {
+      font-style:italic; font-size:.92rem; line-height:1.7;
+      color:rgba(232,213,183,.7); cursor:pointer; display:inline;
+      border-bottom:1px solid rgba(201,168,76,.25); padding-bottom:1px;
+      transition:color .2s, border-color .2s;
+    }
+    .journal-featured:hover { color:var(--gold); border-color:var(--gold); }
+    .journal-featured-wrap {
+      padding:.3rem 0 .5rem;
+      font-size:.62rem; letter-spacing:1.5px; text-transform:uppercase;
+      color:rgba(232,213,183,.32);
+    }
+    .journal-featured-wrap small { display:block; margin-bottom:.4rem; }
+
+    /* ── NOTEBOOK MODAL ─────────────────────────── */
+    .nb-modal-inner {
+      position:relative; width:min(490px,94vw);
+    }
+    .nb-modal-close {
+      position:absolute; top:-2.2rem; right:0;
+      background:none; border:none;
+      color:rgba(232,213,183,.45); font-size:1.5rem;
+      cursor:pointer; padding:.1rem .4rem; line-height:1;
+      transition:color .2s;
+    }
+    .nb-modal-close:hover { color:rgba(232,213,183,.88); }
+    .nb-modal-year {
+      text-align:center; font-size:.67rem; letter-spacing:2px;
+      text-transform:uppercase; color:rgba(232,213,183,.38);
+      margin-bottom:.65rem;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="starsCanvas"></canvas>
+
+<div class="app bg-night" id="app">
+
+  <header>
+    <h1 class="title">13 Flames</h1>
+    <p class="subtitle" id="subtitleText">Set your intentions for the turning of the year</p>
+    <div class="phase-badge" id="phaseBadge">Writing</div>
+
+    <div class="tr-cluster">
+      <div class="day-counter hidden" id="dayCounter">
+        <span class="counter-num" id="counterNum">12</span>
+        <span class="counter-label" id="counterLabel">days until<br>your reveal</span>
+      </div>
+      <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <nav class="phase-nav" id="phaseNav">
+    <button class="phase-nav-btn nav-active" data-phase="writing">Writing</button>
+    <span class="phase-nav-sep">·</span>
+    <button class="phase-nav-btn" data-phase="burning">Burning</button>
+    <span class="phase-nav-sep">·</span>
+    <button class="phase-nav-btn" data-phase="reveal">Reveal</button>
+  </nav>
+
+  <!-- WRITING PHASE -->
+  <div class="writing-phase" id="writingPhase">
+    <p class="progress-text" id="progressText">0 of 13 intentions written</p>
+    <div class="papers-grid" id="papersGrid"></div>
+    <div class="box-section" id="writingBoxSection">
+      <div class="keepsake-box">
+        <div class="box-lid"></div>
+        <div class="box-body">
+          <span class="box-count" id="writingBoxCount">0</span>
+          <span class="box-label">sealed away</span>
+        </div>
+      </div>
+      <p class="box-hint" id="writingBoxHint">Fold your intentions to tuck them inside</p>
+    </div>
+  </div>
+
+  <!-- BURNING PHASE -->
+  <div class="burning-phase hidden" id="burningPhase">
+    <p class="burn-instruction" id="burnInstruction">Drag a sealed envelope to the flame to release it</p>
+    <div class="fire-drop-zone" id="fireDropZone">
+      <div class="drop-ring"></div>
+      <div class="fire-container" id="fireContainer"></div>
+    </div>
+    <div class="burn-row">
+      <div class="box-section hidden" id="burningBoxSection">
+        <div class="keepsake-box">
+          <div class="box-lid"></div>
+          <div class="box-body">
+            <span class="box-label" style="margin-top:0;font-size:.6rem">your sealed intentions</span>
+          </div>
+        </div>
+      </div>
+      <div class="paper-strip" id="paperStrip"></div>
+    </div>
+    <p class="reveal-phase-info" id="burningNote"></p>
+  </div>
+
+  <!-- REVEAL PHASE -->
+  <div class="reveal-phase hidden" id="revealPhase">
+    <div class="reveal-paper">
+      <p class="reveal-header">Your intention — carried through the flame</p>
+      <p class="reveal-text" id="revealText"></p>
+      <div class="reveal-task">
+        <p class="reveal-task-label">Your task for the year ahead</p>
+        <p class="reveal-task-text" id="revealTask"></p>
+      </div>
+    </div>
+    <p class="reveal-phase-info" style="margin-top:2rem">Happy New Year. Carry this forward.</p>
+
+    <!-- JOURNAL (quiet / optional) -->
+    <div class="journal-toggle-row">
+      <button class="journal-toggle-btn" id="journalToggle">◦ &nbsp;journal</button>
+    </div>
+    <div class="journal-wrap hidden" id="journalWrap">
+      <div class="journal-tabs" id="journalTabs"></div>
+      <div id="journalContent"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- NOTEBOOK MODAL -->
+<div class="modal-overlay" id="notebookModal">
+  <div class="nb-modal-inner">
+    <button class="nb-modal-close" id="nbModalClose">&#215;</button>
+    <p class="nb-modal-year" id="nbModalYear"></p>
+    <div class="notebook">
+      <div class="nb-spine"></div>
+      <div class="nb-page" id="nbPage">
+        <div class="nb-rub-text" id="nbRubText"></div>
+        <canvas class="nb-rub-canvas" id="nbRubCanvas"></canvas>
+        <div class="nb-rub-hint" id="nbRubHint">click &amp; drag to reveal</div>
+      </div>
+      <div class="nb-nav">
+        <button class="nb-nav-btn" id="nbPrev">&#8249;</button>
+        <span class="nb-page-num" id="nbPageNum">1 of 13</span>
+        <button class="nb-nav-btn" id="nbNext">&#8250;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WRITING MODAL -->
+<div class="modal-overlay" id="writingModal">
+  <div class="writing-modal-box">
+    <h2 id="writingModalTitle">Paper I — your intention</h2>
+    <textarea id="writingTextarea" placeholder="Write your intention as if it is. Ex. I am a world traveler.&#10;&#10;What do you want for your life in the upcoming year?&#10;&#10;Write freely — this is for you alone."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="writingCancel">Cancel</button>
+      <button class="btn btn-primary" id="writingSave">Save Intention</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="settings-box">
+    <h2>Your Sacred Space</h2>
+    <div class="settings-section">
+      <h3>Fire Type</h3>
+      <div class="option-row">
+        <button class="opt-btn active" data-fire="campfire">Campfire</button>
+        <button class="opt-btn" data-fire="candle">Candle</button>
+        <button class="opt-btn" data-fire="candlestick">Candlestick</button>
+      </div>
+    </div>
+    <div class="settings-section" id="candleColorSection" style="display:none">
+      <h3>Candle Color</h3>
+      <div class="color-swatch-row" id="candleSwatches"></div>
+    </div>
+    <div class="settings-section demo-row">
+      <h3>Preview Phases</h3>
+      <div class="option-row">
+        <button class="opt-btn btn-sm" id="demoWrite">Writing</button>
+        <button class="opt-btn btn-sm" id="demoBurn">Burning</button>
+        <button class="opt-btn btn-sm" id="demoBurnAll">Burn All</button>
+        <button class="opt-btn btn-sm" id="demoReveal">Reveal</button>
+        <button class="opt-btn btn-sm" id="demoReset" style="color:#e87070;">Reset All</button>
+      </div>
+    </div>
+    <hr class="divider" />
+    <div class="modal-actions">
+      <button class="btn btn-gold" id="settingsClose">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOLD ANIMATION OVERLAY -->
+<div id="foldOverlay" class="hidden">
+  <div class="fold-wrap" id="foldWrap">
+    <div class="fold-top-half">
+      <div class="fold-face"><div class="fold-text" id="foldTextTop"></div></div>
+    </div>
+    <div class="fold-crease"></div>
+    <div class="fold-bot-half" id="foldBotHalf">
+      <div class="fold-bot-front">
+        <div class="fold-face"><div class="fold-text" id="foldTextBot"></div></div>
+      </div>
+      <div class="fold-bot-back"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EARLY REVEAL MODAL -->
+<div class="modal-overlay" id="earlyRevealModal">
+  <div class="settings-box" style="max-width:380px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:.75rem">🕯️</div>
+    <h2 style="font-size:1rem;letter-spacing:1px;margin-bottom:1rem">One more night</h2>
+    <p style="font-size:.88rem;line-height:1.7;color:rgba(232,213,183,.75);font-style:italic;">
+      The intention of this ritual is to open your final paper<br>
+      on the <strong style="color:var(--gold)">13th night — January 2nd</strong>.<br><br>
+      Would you like to open it tonight instead?
+    </p>
+    <div class="modal-actions" style="justify-content:center;margin-top:1.5rem;gap:1rem;">
+      <button class="btn btn-secondary" id="earlyRevealCancel" style="color:#e8d5b7;border-color:rgba(232,213,183,.25)">Wait until tomorrow</button>
+      <button class="btn btn-gold" id="earlyRevealConfirm">Open tonight</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  DATA
+// ─────────────────────────────────────────────────────────────
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII'];
+
+const TASKS = [
+  "Write a letter to your future self and seal it away for one year.",
+  "Take a solo walk in nature — no phone, no destination, just presence.",
+  "Cook a meal from scratch and share it with someone you love.",
+  "Call or write to someone you haven't spoken to in far too long.",
+  "Plant something — even a single seed in a small cup of soil.",
+  "Create something with your hands without judging the result.",
+  "Volunteer a few hours for a local cause that matters to you.",
+  "Spend one full evening completely offline and notice how it feels.",
+  "Write down ten things you genuinely appreciate about yourself.",
+  "Donate items you no longer need to someone who does.",
+  "Visit a place in your city or town you have never been.",
+  "Learn five words in a language you don't know — then use them.",
+  "Watch a sunrise or sunset from beginning to end, fully present.",
+  "Write a poem about something or someone you love.",
+  "Sit outside for twenty minutes and simply observe without doing.",
+  "Send a handwritten letter to someone who has mattered in your life.",
+  "Make a playlist of songs that have genuinely changed you.",
+  "Cook a recipe from a culture very different from your own.",
+  "Forgive yourself, specifically, for one thing — write it, then let it go.",
+  "Read a book you have been meaning to read for a long time.",
+  "Photograph beautiful things you pass by every single day.",
+  "Tell someone specifically and clearly what you appreciate about them.",
+  "Declutter one space that has quietly bothered you for months.",
+  "Make a list of thirteen experiences you want to have this year.",
+  "Start a journal and write in it every day for thirteen days.",
+  "Learn one new skill, even something small, just to know you can.",
+  "Do something that scares you in a healthy, life-expanding way.",
+  "Spend a full day doing only things that restore and bring you joy.",
+  "Find a way to give anonymously to someone in genuine need.",
+  "Create a small morning ritual and protect it for thirty days.",
+];
+
+const CANDLE_COLORS = [
+  {label:'Ivory', hex:'#f0e68c'},{label:'White', hex:'#f5f5f0'},{label:'Red',    hex:'#c0392b'},
+  {label:'Green', hex:'#27ae60'},{label:'Blue',  hex:'#2980b9'},{label:'Purple', hex:'#8e44ad'},
+  {label:'Orange',hex:'#e67e22'},{label:'Gold',  hex:'#c9a030'},{label:'Rose',   hex:'#c0607a'},
+  {label:'Black', hex:'#2c2c2c'},
+];
+
+// ─────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────
+function loadState() {
+  try { const s = localStorage.getItem('13flames_v2'); if (s) return JSON.parse(s); } catch(e) {}
+  return null;
+}
+function defaultState() {
+  return {
+    papers: Array.from({length:13}, (_,i) => ({
+      id:i, text:'', folded:false, sealed:false, burned:false, burnedDate:null
+    })),
+    settings: { fireType:'campfire', candleColor:'#f0e68c', background:'night' },
+    phase: 'writing',
+    revealTaskIndex: null,
+    burnOrder: null,
+    demoMode: false,
+    journal: [],
+  };
+}
+let state = loadState() || defaultState();
+// Migrate old saves that lack burnedDate / burnOrder / demoMode / journal
+state.papers.forEach(p => { if (p.burnedDate === undefined) p.burnedDate = null; });
+if (state.burnOrder === undefined) state.burnOrder = null;
+if (state.demoMode === undefined) state.demoMode = false;
+if (!state.journal) state.journal = [];
+
+function saveState() { localStorage.setItem('13flames_v2', JSON.stringify(state)); }
+
+// ─────────────────────────────────────────────────────────────
+//  DEMO MODE  (bypasses date restrictions in preview)
+// ─────────────────────────────────────────────────────────────
+let isDemoMode = state.demoMode || false;
+
+// ─────────────────────────────────────────────────────────────
+//  DATE UTILITIES
+// ─────────────────────────────────────────────────────────────
+// Solstice = Dec 21 of the relevant year.
+// Reveal   = Dec 21 + 12 days = Jan 2 of the following year.
+// Day 1 = Dec 21 | Day 13 = Jan 2
+
+function getBaseYear() {
+  // If we're in January (possibly mid-ritual), the solstice was last year.
+  const m = new Date().getMonth();
+  return m === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear();
+}
+
+function getSolsticeDate() {
+  return new Date(getBaseYear(), 11, 21, 0, 0, 0); // Dec 21 midnight
+}
+function getSolsticeSunset() {
+  return new Date(getBaseYear(), 11, 21, 18, 0, 0); // Dec 21 6 pm — writing closes
+}
+function getRevealDate() {
+  const d = new Date(getBaseYear(), 11, 21);
+  d.setDate(d.getDate() + 12); // Jan 2
+  return d;
+}
+
+// 1-indexed day number within the ritual (1 = Dec 21 … 13 = Jan 2)
+function dayNumber() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const sol   = getSolsticeDate();
+  const diff  = Math.round((today - sol) / 864e5);
+  return Math.max(1, Math.min(diff + 1, 13));
+}
+
+// How many papers are ALLOWED to have been burned up to today (max 12; 13th is reveal)
+function papersAllowedToBurn() {
+  if (isDemoMode) return 12;
+  return Math.min(dayNumber(), 12);
+}
+
+// Papers burned so far
+function papersBurned() {
+  return state.papers.filter(p => p.burned).length;
+}
+
+// Can the user burn at least one more paper right now?
+function canBurnMore() {
+  if (isDemoMode) return papersBurned() < 12;
+  return papersAllowedToBurn() > papersBurned();
+}
+
+// Jan 1: all 12 burns done, 1 paper left — offer early reveal
+function canEarlyReveal() {
+  if (isDemoMode) return papersBurned() >= 12;
+  return daysUntilReveal() === 1 && papersBurned() >= 12;
+}
+
+// How many burns are available right now (including catch-up)
+function burnsAvailable() {
+  if (isDemoMode) return Math.max(0, 12 - papersBurned());
+  return Math.max(0, papersAllowedToBurn() - papersBurned());
+}
+
+// Days remaining until reveal (0 = reveal day)
+function daysUntilReveal() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const reveal = getRevealDate(); reveal.setHours(0,0,0,0);
+  return Math.max(0, Math.round((reveal - today) / 864e5));
+}
+
+// Is writing still allowed? (before solstice sunset)
+function writingOpen() {
+  if (isDemoMode) return true;
+  return new Date() < getSolsticeSunset();
+}
+
+// Detect phase from real date
+function detectPhase() {
+  const now = new Date();
+  const reveal = getRevealDate(); reveal.setHours(0,0,0,0);
+  const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+  if (todayMidnight >= reveal) return 'reveal';
+  if (now >= getSolsticeSunset()) return 'burning';
+  return 'writing';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  STARS
+// ─────────────────────────────────────────────────────────────
+(function initStars() {
+  const canvas = document.getElementById('starsCanvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() { canvas.width=window.innerWidth; canvas.height=window.innerHeight; makeStars(); }
+  function makeStars() {
+    stars = Array.from({length:220}, () => ({
+      x:Math.random()*canvas.width, y:Math.random()*canvas.height,
+      r:Math.random()*1.5+0.3, a:Math.random(), speed:Math.random()*0.008+0.003
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if (!document.getElementById('app').classList.contains('bg-night')) { requestAnimationFrame(draw); return; }
+    stars.forEach(s => {
+      s.a += s.speed;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,240,${0.3+0.7*Math.abs(Math.sin(s.a))})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize); resize(); draw();
+})();
+
+// ─────────────────────────────────────────────────────────────
+//  DOM REFS
+// ─────────────────────────────────────────────────────────────
+const appEl         = document.getElementById('app');
+const subtitleText  = document.getElementById('subtitleText');
+const phaseBadge    = document.getElementById('phaseBadge');
+const writingPhase  = document.getElementById('writingPhase');
+const burningPhase  = document.getElementById('burningPhase');
+const revealPhase   = document.getElementById('revealPhase');
+const papersGrid    = document.getElementById('papersGrid');
+const progressText  = document.getElementById('progressText');
+const fireContainer = document.getElementById('fireContainer');
+const fireDropZone  = document.getElementById('fireDropZone');
+const paperStrip    = document.getElementById('paperStrip');
+const burningNote   = document.getElementById('burningNote');
+const burnInstEl    = document.getElementById('burnInstruction');
+const revealText    = document.getElementById('revealText');
+const revealTask    = document.getElementById('revealTask');
+const dayCounterEl  = document.getElementById('dayCounter');
+const counterNumEl  = document.getElementById('counterNum');
+const counterLblEl  = document.getElementById('counterLabel');
+const writingModal  = document.getElementById('writingModal');
+const writingTitle  = document.getElementById('writingModalTitle');
+const writingTA     = document.getElementById('writingTextarea');
+const writingCancel = document.getElementById('writingCancel');
+const writingSave   = document.getElementById('writingSave');
+const settingsModal = document.getElementById('settingsModal');
+const settingsBtn   = document.getElementById('settingsBtn');
+const settingsClose = document.getElementById('settingsClose');
+const candleSection = document.getElementById('candleColorSection');
+const candleSwatches= document.getElementById('candleSwatches');
+
+let editingPaperId = null;
+let touchDragId    = null;
+let touchGhost     = null;
+let isBurning      = false;
+
+// ─────────────────────────────────────────────────────────────
+//  SEAL SVG
+// ─────────────────────────────────────────────────────────────
+function sealSVG(size=62, variant=0) {
+  const gid = 'sg'+size;
+  const pts = [16, 12, 14, 10][variant % 4];
+  const burst = Array.from({length:pts}, (_,i) => {
+    const a=(i/pts)*Math.PI*2, x1=50+36*Math.cos(a), y1=50+36*Math.sin(a),
+          a2=((i+.5)/pts)*Math.PI*2, xm=50+43*Math.cos(a2), ym=50+43*Math.sin(a2),
+          x2=50+36*Math.cos(a+Math.PI/pts), y2=50+36*Math.sin(a+Math.PI/pts);
+    return `<polygon points="50,50 ${x1.toFixed(1)},${y1.toFixed(1)} ${xm.toFixed(1)},${ym.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}"/>`;
+  }).join('');
+  // Four distinct center symbols — none indicate order
+  const symbols = [
+    // Flame
+    `<path d="M50,28 C50,28 40,38 42,47 C44,54 38,56 42,64 C46,70 58,70 60,62 C63,52 55,50 56,42 C57,36 50,28 50,28Z" fill="#2c1810" opacity=".55"/>`,
+    // Crescent moon
+    `<path d="M50,30 A20,20 0 1 1 50,70 A14,14 0 1 0 50,30Z" fill="#2c1810" opacity=".55"/>`,
+    // Five-pointed star
+    `<polygon points="50,30 53.8,41.8 66.2,41.8 56.2,49.2 60,61 50,54 40,61 43.8,49.2 33.8,41.8 46.2,41.8" fill="#2c1810" opacity=".55"/>`,
+    // Snowflake
+    `<g stroke="#2c1810" stroke-width="3" opacity=".55" stroke-linecap="round"><line x1="50" y1="32" x2="50" y2="68"/><line x1="33" y1="41" x2="67" y2="59"/><line x1="33" y1="59" x2="67" y2="41"/><circle cx="50" cy="50" r="3.5" fill="#2c1810"/></g>`,
+  ];
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="${gid}" cx="50%" cy="45%">
+      <stop offset="0%" stop-color="#e8b84b"/><stop offset="100%" stop-color="#8b5e14"/>
+    </radialGradient></defs>
+    <g fill="#c9a030" opacity=".6">${burst}</g>
+    <circle cx="50" cy="50" r="30" fill="url(#${gid})"/>
+    <circle cx="50" cy="50" r="30" fill="none" stroke="#e8c060" stroke-width="1.5" opacity=".6"/>
+    ${symbols[variant % 4]}
+    <circle cx="50" cy="50" r="22" fill="none" stroke="rgba(44,24,16,.3)" stroke-width="1"/>
+  </svg>`;
+}
+
+function envelopeHTML(id, burned, noBurn, isLast) {
+  const cls = ['envelope', burned?'burned':'', noBurn&&!burned&&!isLast?'no-burn':'', isLast?'last-paper':''].filter(Boolean).join(' ');
+  const drag = (!burned && !noBurn && !isLast) ? 'draggable="true"' : '';
+  return `<div class="${cls}" ${drag} data-id="${id}">
+    <div class="env-flap"></div>
+    <div class="env-body"><div class="env-seal-wrap">${sealSVG(30, id % 4)}</div></div>
+    ${isLast ? '<span class="env-reveal-label">Open tonight</span>' : ''}
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FIRE
+// ─────────────────────────────────────────────────────────────
+function campfireHTML() {
+  let p='';
+  for(let i=0;i<14;i++){
+    const sz=Math.random()*4+2,lf=Math.random()*70+5,del=Math.random()*2,dur=Math.random()*1.5+1.5,dr=(Math.random()-.5)*80;
+    p+=`<div class="particle" style="width:${sz}px;height:${sz}px;left:${lf}%;--drift:${dr}px;animation-delay:${del}s;animation-duration:${dur}s;background:${Math.random()>.5?'#ff6b35':'#ffb347'}"></div>`;
+  }
+  // CSS flames are fallback — hidden once video plays
+  return `<div class="campfire">
+    <div class="cf-particles">${p}</div>
+    <video class="cf-video" autoplay loop muted playsinline
+      oncanplay="this.nextElementSibling.style.display='none'"
+      onerror="this.style.display='none'">
+      <source src="Campfire.MOV" type="video/mp4">
+      <source src="Campfire.MOV" type="video/quicktime">
+    </video>
+    <div class="cf-flame-wrap"><div class="cf-flame cf-flame-1"></div><div class="cf-flame cf-flame-2"></div><div class="cf-flame cf-flame-3"></div></div>
+    <div class="cf-embers"></div>
+    <div class="cf-log cf-log-1"></div>
+    <div class="cf-log cf-log-2"></div>
+    <div class="cf-stones"></div>
+  </div>`;
+}
+function candleHTML(color) {
+  return `<div class="candle-scene">
+    <div class="candle-bg-circle"></div>
+    <div class="candle-body" style="height:130px;background:${color};">
+      <div class="candle-drip candle-drip-1" style="background:${color}"></div>
+      <div class="candle-drip candle-drip-2" style="background:${color}"></div>
+      <div class="candle-wick"></div>
+      <div class="candle-halo"></div>
+      <div class="candle-flame-wrap" style="z-index:2;">
+        <div class="candle-glow"></div>
+        <video class="candle-video" autoplay loop muted playsinline
+          oncanplay="this.parentElement.querySelector('.candle-css-flames').style.display='none'"
+          onerror="this.style.display='none'">
+          <source src="IMG_9996.mov" type="video/mp4">
+          <source src="IMG_9996.mov" type="video/quicktime">
+          <source src="candle close.mov" type="video/quicktime">
+        </video>
+        <div class="candle-css-flames">
+          <div class="candle-flame-outer"></div>
+          <div class="candle-flame-mid"></div>
+          <div class="candle-flame-inner"></div>
+          <div class="candle-flame-core"></div>
+        </div>
+      </div>
+    </div>
+    <div class="saucer"></div>
+  </div>`;
+}
+function candlestickHTML() {
+  return `<div class="candlestick-scene">
+    <video class="candlestick-video" autoplay loop muted playsinline
+      onerror="this.style.display='none'">
+      <source src="IMG_0001.MOV" type="video/mp4">
+      <source src="IMG_0001.MOV" type="video/quicktime">
+    </video>
+  </div>`;
+}
+function renderFire() {
+  const {fireType,candleColor}=state.settings;
+  const BG = { campfire:'#271814', candle:'#442f29', candlestick:'#2c100d' };
+  appEl.style.background = BG[fireType] || '#442f29';
+  if (fireType==='campfire')        fireContainer.innerHTML = campfireHTML();
+  else if (fireType==='candlestick') fireContainer.innerHTML = candlestickHTML();
+  else                              fireContainer.innerHTML = candleHTML(candleColor);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  COUNTER
+// ─────────────────────────────────────────────────────────────
+function updateCounter() {
+  if (state.phase !== 'burning') { dayCounterEl.classList.add('hidden'); return; }
+  dayCounterEl.classList.remove('hidden');
+  const days = daysUntilReveal();
+  counterNumEl.textContent = days;
+  counterLblEl.innerHTML = days === 1 ? 'day until<br>your reveal' : 'days until<br>your reveal';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  BURN INSTRUCTION
+// ─────────────────────────────────────────────────────────────
+function updateBurnInstruction() {
+  const available = burnsAvailable();
+  const locked = !canBurnMore();
+
+  fireDropZone.classList.toggle('burn-locked', locked && !isDemoMode && !canBurnMore());
+
+  if (locked) {
+    burnInstEl.className = 'burn-instruction locked-today';
+    burnInstEl.textContent = "You've released your paper for today — return tomorrow.";
+  } else if (available > 1) {
+    burnInstEl.className = 'burn-instruction';
+    burnInstEl.textContent = `You may release ${available} papers today — drag one to the flame.`;
+  } else {
+    burnInstEl.className = 'burn-instruction';
+    burnInstEl.textContent = 'Drag a sealed envelope to the flame to release it.';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RENDER PAPERS GRID
+// ─────────────────────────────────────────────────────────────
+function paperCardHTML(p) {
+  const rom = ROMAN[p.id];
+  let inner='', classes='paper-card';
+  const open = writingOpen();
+
+  // Burned or folded papers live in the box — not shown in the writing grid
+  if (p.burned || p.folded) return '';
+
+  if (p.sealed) {
+    classes += ' sealed locked';
+    inner = `<div class="paper-face"><span class="paper-num">${rom}</span><div class="seal-svg-wrap">${sealSVG()}</div></div>`;
+  } else if (p.text) {
+    classes += ' written' + (open?'':' locked');
+    const preview = p.text.length>70 ? p.text.substring(0,67)+'…' : p.text;
+    inner = `<div class="paper-face"><span class="paper-num">${rom}</span><div class="paper-icon">✍️</div><div class="paper-preview">${preview}</div>${open?`<button class="fold-btn" data-fold="${p.id}">Fold &amp; Seal Away</button>`:''}</div>`;
+  } else {
+    // Blank & unwritten
+    if (!open) {
+      classes += ' sealed locked';
+      inner = `<div class="paper-face"><span class="paper-num">${rom}</span><div class="seal-svg-wrap">${sealSVG()}</div></div>`;
+    } else {
+      inner = `<div class="paper-face"><span class="paper-num">${rom}</span><div class="paper-icon">📄</div><div class="paper-label">Write intention</div></div>`;
+    }
+  }
+  return `<div class="${classes}" data-id="${p.id}">${inner}</div>`;
+}
+
+function renderGrid() {
+  papersGrid.innerHTML = state.papers.map(paperCardHTML).join('');
+
+  const filled = state.papers.filter(p => p.text || p.folded).length;
+  const folded = state.papers.filter(p => p.folded).length;
+  progressText.textContent = `${filled} of 13 intentions written`;
+
+  // Update keepsake box count
+  const boxCountEl = document.getElementById('writingBoxCount');
+  const boxHintEl  = document.getElementById('writingBoxHint');
+  if (boxCountEl) boxCountEl.textContent = folded;
+  if (boxHintEl) {
+    if (folded === 13) boxHintEl.textContent = 'All 13 intentions sealed away — ready for the solstice';
+    else if (folded === 0) boxHintEl.textContent = 'Fold your intentions to tuck them inside';
+    else boxHintEl.textContent = `${folded} of 13 tucked safely away`;
+  }
+
+  if (!writingOpen()) {
+    progressText.textContent += '  —  The solstice has passed. Your papers are sealed.';
+    return;
+  }
+
+  papersGrid.querySelectorAll('.paper-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const p = state.papers[parseInt(card.dataset.id)];
+      if (p.sealed || p.burned || p.folded) return;
+      openWritingModal(p.id);
+    });
+  });
+
+  // Fold buttons — stop card click propagation, trigger fold animation
+  papersGrid.querySelectorAll('.fold-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      foldCard(parseInt(btn.dataset.fold));
+    });
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FOLD CARD INTO BOX
+// ─────────────────────────────────────────────────────────────
+function foldCard(id) {
+  const p = state.papers[id];
+  if (!p || !p.text || p.folded) return;
+
+  playFoldAnimation(p.text, () => {
+    state.papers[id].folded = true;
+    saveState();
+    renderGrid();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RENDER ENVELOPE STRIP
+// ─────────────────────────────────────────────────────────────
+function renderStrip(animate) {
+  const locked  = !canBurnMore();
+  const earlyOk = canEarlyReveal();
+  const unburned = state.papers.filter(p => !p.burned);
+  const lastId   = earlyOk && unburned.length === 1 ? unburned[0].id : null;
+
+  // Use the stored shuffled order, fall back to natural order if somehow missing
+  const order = state.burnOrder || state.papers.map(p => p.id);
+  paperStrip.innerHTML = order.map(id =>
+    envelopeHTML(id, state.papers[id].burned, locked, id === lastId)
+  ).join('');
+
+  // Stagger emerge animation on first entry to burning phase
+  if (animate) {
+    paperStrip.querySelectorAll('.envelope').forEach((el, i) => {
+      el.classList.add('emerging');
+      el.style.animationDelay = `${i * 0.06}s`;
+    });
+  }
+
+  updateBurnInstruction();
+
+  // Early-reveal click on the glowing last envelope
+  if (lastId !== null) {
+    const lastEl = paperStrip.querySelector(`.envelope[data-id="${lastId}"]`);
+    if (lastEl) lastEl.addEventListener('click', () => openEarlyRevealModal());
+  }
+
+  if (locked && !earlyOk) return; // no drag events needed
+
+  paperStrip.querySelectorAll('.envelope[draggable]').forEach(el => {
+    const id = parseInt(el.dataset.id);
+
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', String(id));
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => el.classList.add('dragging'), 0);
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+
+    el.addEventListener('touchstart', e => {
+      if (isBurning) return;
+      touchDragId = id;
+      const t = e.touches[0];
+      const clone = el.cloneNode(true);
+      clone.style.cssText=`position:fixed;z-index:9999;pointer-events:none;opacity:.85;transform:scale(1.15) rotate(-4deg);width:90px;left:${t.clientX-45}px;top:${t.clientY-33}px;transition:none;`;
+      document.body.appendChild(clone);
+      touchGhost = clone;
+      el.classList.add('dragging');
+    }, {passive:true});
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DRAG & DROP
+// ─────────────────────────────────────────────────────────────
+let dragDropSetup = false;
+function setupDragDrop() {
+  if (dragDropSetup) return;
+  dragDropSetup = true;
+
+  fireDropZone.addEventListener('dragover', e => {
+    if (!canBurnMore()) return;
+    e.preventDefault(); e.dataTransfer.dropEffect='move';
+    fireDropZone.classList.add('drag-over');
+  });
+  fireDropZone.addEventListener('dragleave', e => {
+    if (!fireDropZone.contains(e.relatedTarget)) fireDropZone.classList.remove('drag-over');
+  });
+  fireDropZone.addEventListener('drop', e => {
+    e.preventDefault(); fireDropZone.classList.remove('drag-over');
+    if (!canBurnMore()) return;
+    const id = parseInt(e.dataTransfer.getData('text/plain'));
+    if (!isNaN(id) && !state.papers[id].burned) triggerBurn(id);
+  });
+
+  document.addEventListener('touchmove', e => {
+    if (!touchGhost) return;
+    e.preventDefault();
+    const t=e.touches[0];
+    touchGhost.style.left=(t.clientX-45)+'px';
+    touchGhost.style.top=(t.clientY-33)+'px';
+    const r=fireDropZone.getBoundingClientRect();
+    const over = canBurnMore() && t.clientX>=r.left && t.clientX<=r.right && t.clientY>=r.top && t.clientY<=r.bottom;
+    fireDropZone.classList.toggle('drag-over', over);
+  }, {passive:false});
+
+  document.addEventListener('touchend', e => {
+    if (!touchGhost) return;
+    const t=e.changedTouches[0];
+    const r=fireDropZone.getBoundingClientRect();
+    const dropped = canBurnMore() && t.clientX>=r.left && t.clientX<=r.right && t.clientY>=r.top && t.clientY<=r.bottom;
+    fireDropZone.classList.remove('drag-over');
+    document.body.removeChild(touchGhost); touchGhost=null;
+    paperStrip.querySelectorAll('.envelope').forEach(el=>el.classList.remove('dragging'));
+    if (dropped && touchDragId!==null && !state.papers[touchDragId].burned) triggerBurn(touchDragId);
+    touchDragId=null;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  TRIGGER BURN
+// ─────────────────────────────────────────────────────────────
+function spawnSmoke(cx, cy) {
+  for (let i = 0; i < 22; i++) {
+    const wisp = document.createElement('div');
+    wisp.className = 'smoke-wisp';
+    const size  = (18 + Math.random() * 36).toFixed(1);
+    const drift = (-80 + Math.random() * 160).toFixed(1);
+    const delay = (Math.random() * 900).toFixed(0);
+    const dur   = (2400 + Math.random() * 1800).toFixed(0);
+    const ox    = ((Math.random() - 0.5) * 44).toFixed(1);
+    const oy    = ((Math.random() - 0.5) * 18).toFixed(1);
+    wisp.style.cssText = `left:${(cx - size/2 + +ox).toFixed(1)}px;top:${(cy + +oy).toFixed(1)}px;--size:${size}px;--drift:${drift}px;--delay:${delay}ms;--dur:${dur}ms;`;
+    document.body.appendChild(wisp);
+    setTimeout(() => wisp.remove(), +delay + +dur + 200);
+  }
+}
+
+function triggerBurn(id) {
+  if (isBurning || state.papers[id].burned || !canBurnMore()) return;
+  isBurning = true;
+
+  // Build envelope with char + ember overlay layers
+  const flash = document.createElement('div');
+  flash.className = 'burn-flash';
+  flash.innerHTML = `<div class="env-flap" style="border-left-width:36px;border-right-width:36px;border-top-width:20px;position:absolute;top:0;left:0;"></div><div class="env-body" style="height:44px;bottom:0;left:0;right:0;position:absolute;"><div class="env-seal-wrap">${sealSVG(22)}</div></div><div class="burn-char"></div><div class="burn-ember"></div>`;
+  fireDropZone.appendChild(flash);
+
+  // Flare the fire
+  fireContainer.classList.add('fire-flare');
+  setTimeout(() => fireContainer.classList.remove('fire-flare'), 900);
+
+  // Spawn smoke as the envelope begins to crumble (~65% through)
+  setTimeout(() => {
+    const rect = flash.getBoundingClientRect();
+    spawnSmoke(rect.left + rect.width / 2, rect.top);
+  }, 2650);
+
+  // Remove envelope, record burn, update UI
+  setTimeout(() => {
+    if (flash.parentNode) flash.parentNode.removeChild(flash);
+    const today = new Date().toISOString().split('T')[0];
+    state.papers[id].burned = true;
+    state.papers[id].burnedDate = today;
+    isBurning = false;
+    saveState();
+    const remaining = state.papers.filter(p => !p.burned);
+    if (remaining.length === 0) {
+      setTimeout(() => switchPhase('reveal'), 500);
+    } else {
+      renderStrip(false);
+      updateCounter();
+    }
+  }, 3400);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SWITCH PHASE
+// ─────────────────────────────────────────────────────────────
+function updatePhaseNav() {
+  document.querySelectorAll('.phase-nav-btn').forEach(btn =>
+    btn.classList.toggle('nav-active', btn.dataset.phase === state.phase)
+  );
+}
+
+function switchPhase(phase) {
+  state.phase = phase; saveState();
+  writingPhase.classList.add('hidden');
+  burningPhase.classList.add('hidden');
+  revealPhase.classList.add('hidden');
+  updatePhaseNav();
+
+  if (phase === 'writing') {
+    writingPhase.classList.remove('hidden');
+    phaseBadge.textContent = 'Writing';
+    subtitleText.textContent = 'Set your intentions for the turning of the year';
+    dayCounterEl.classList.add('hidden');
+    renderGrid();
+
+  } else if (phase === 'burning') {
+    // Seal all papers (including any not yet written)
+    state.papers.forEach(p => { p.sealed = true; if (!p.folded) p.folded = true; });
+    saveState();
+
+    // Check if reveal date is already reached
+    if (!isDemoMode && daysUntilReveal() === 0) { switchPhase('reveal'); return; }
+
+    // Generate shuffled burn order once and persist it
+    if (!state.burnOrder) {
+      const ids = state.papers.map(p => p.id);
+      for (let i = ids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+      }
+      state.burnOrder = ids;
+      saveState();
+    }
+
+    burningPhase.classList.remove('hidden');
+    phaseBadge.textContent = 'Burning';
+    subtitleText.innerHTML = 'Release your intentions to the universe. Let 12 be tended and sowed without your hand.<br><em style="font-size:.82em;opacity:.85">Save the last one to tend yourself &mdash; your task for the upcoming year.</em>';
+    renderFire();
+    setupDragDrop();
+    updateCounter();
+    burningNote.textContent = 'One paper per day, from the Winter Solstice to the New Year.';
+
+    // Show keepsake box; animate envelopes emerging only on first entry this session
+    const burningBox = document.getElementById('burningBoxSection');
+    burningBox.classList.remove('hidden');
+    const isFirstEntry = !burningBox.dataset.shown;
+    if (isFirstEntry) {
+      burningBox.dataset.shown = '1';
+      setTimeout(() => {
+        renderStrip(true);
+        setTimeout(() => { burningBox.style.transition = 'opacity .8s'; burningBox.style.opacity = '0.4'; }, 900);
+      }, 400);
+    } else {
+      burningBox.style.opacity = '0.4';
+      renderStrip(false);
+    }
+
+  } else if (phase === 'reveal') {
+    revealPhase.classList.remove('hidden');
+    phaseBadge.textContent = 'Reveal';
+    subtitleText.textContent = 'The year turns — receive your task';
+    dayCounterEl.classList.add('hidden');
+    renderReveal();
+    saveToJournal();
+    document.getElementById('journalWrap').classList.add('hidden');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  RENDER REVEAL
+// ─────────────────────────────────────────────────────────────
+function renderReveal() {
+  const remaining = state.papers.filter(p => !p.burned);
+  const p = remaining.length > 0 ? remaining[remaining.length-1] : state.papers[12];
+  revealText.textContent = p.text || '(Your intention, sealed within the flame)';
+  if (state.revealTaskIndex === null) { state.revealTaskIndex = Math.floor(Math.random()*TASKS.length); saveState(); }
+  revealTask.textContent = TASKS[state.revealTaskIndex];
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FOLD ANIMATION
+// ─────────────────────────────────────────────────────────────
+function playFoldAnimation(text, onComplete) {
+  const overlay  = document.getElementById('foldOverlay');
+  const wrap     = document.getElementById('foldWrap');
+  const botHalf  = document.getElementById('foldBotHalf');
+  const textTop  = document.getElementById('foldTextTop');
+  const textBot  = document.getElementById('foldTextBot');
+
+  // Split text across both halves (top shows first half, bottom shows second)
+  const lines = text.split('\n');
+  const midLine = Math.ceil(lines.length / 2);
+  textTop.textContent = lines.slice(0, midLine).join('\n');
+  textBot.textContent = lines.slice(midLine).join('\n') || '';
+
+  // Reset state
+  wrap.classList.remove('shrink-away');
+  wrap.style.transform = '';
+  wrap.style.opacity = '';
+  botHalf.style.transition = '';
+  botHalf.style.transform = 'rotateX(0deg)';
+
+  overlay.classList.remove('hidden');
+
+  // Helper: get the writing-phase keepsake box lid + body
+  function getBoxEls() {
+    const sec = document.getElementById('writingBoxSection');
+    return sec ? { lid: sec.querySelector('.box-lid'), body: sec.querySelector('.box-body') } : {};
+  }
+
+  // Phase 1 — longer pause so user sees their words, then slow fold
+  setTimeout(() => {
+    botHalf.style.transition = 'transform 1.2s cubic-bezier(.42,0,.58,1)';
+    botHalf.style.transform  = 'rotateX(-180deg)';
+  }, 600);
+
+  // Phase 2 — open box lid as paper prepares to descend
+  setTimeout(() => {
+    const { lid } = getBoxEls();
+    if (lid) lid.classList.add('open');
+  }, 2100);
+
+  // Phase 3 — paper flies into box
+  setTimeout(() => {
+    const boxSection = document.getElementById('writingBoxSection');
+    const boxRect    = boxSection ? boxSection.getBoundingClientRect() : null;
+    const screenCX   = window.innerWidth  / 2;
+    const screenCY   = window.innerHeight / 2;
+    const dx = boxRect ? (boxRect.left + boxRect.width  / 2) - screenCX : 0;
+    const dy = boxRect ? (boxRect.top  + boxRect.height / 2) - screenCY : 80;
+
+    wrap.classList.add('shrink-away');
+    wrap.style.transform = `translate(${dx}px, ${dy}px) scale(0.06)`;
+    wrap.style.opacity   = '0';
+  }, 2500);
+
+  // Phase 4 — paper lands, close lid, flash box
+  setTimeout(() => {
+    const { lid, body } = getBoxEls();
+    if (lid)  lid.classList.remove('open');
+    if (body) { body.classList.remove('box-flash'); void body.offsetWidth; body.classList.add('box-flash'); }
+  }, 3200);
+
+  // Done — hide overlay and callback
+  setTimeout(() => {
+    overlay.classList.add('hidden');
+    wrap.classList.remove('shrink-away');
+    wrap.style.transform = '';
+    wrap.style.opacity   = '';
+    botHalf.style.transition = '';
+    botHalf.style.transform  = 'rotateX(0deg)';
+    onComplete();
+  }, 3600);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  WRITING MODAL
+// ─────────────────────────────────────────────────────────────
+function openWritingModal(id) {
+  if (!writingOpen()) return;
+  editingPaperId = id;
+  writingTitle.textContent = `Paper ${ROMAN[id]} — your intention`;
+  writingTA.value = state.papers[id].text || '';
+  writingModal.classList.add('open');
+  setTimeout(() => writingTA.focus(), 100);
+}
+function closeWritingModal() { writingModal.classList.remove('open'); editingPaperId=null; }
+
+writingCancel.addEventListener('click', closeWritingModal);
+writingModal.addEventListener('click', e => { if(e.target===writingModal) closeWritingModal(); });
+
+writingSave.addEventListener('click', () => {
+  if (editingPaperId===null || !writingOpen()) return;
+  const text = writingTA.value.trim();
+  if (!text) { closeWritingModal(); return; }
+  state.papers[editingPaperId].text = text;
+  saveState();
+  closeWritingModal();
+  renderGrid();
+});
+
+// ─────────────────────────────────────────────────────────────
+//  SETTINGS
+// ─────────────────────────────────────────────────────────────
+CANDLE_COLORS.forEach(c => {
+  const el = document.createElement('div');
+  el.className='color-swatch'+(c.hex===state.settings.candleColor?' active':'');
+  el.style.background=c.hex; el.title=c.label;
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+    el.classList.add('active'); state.settings.candleColor=c.hex; saveState(); renderFire();
+  });
+  candleSwatches.appendChild(el);
+});
+
+document.querySelectorAll('[data-fire]').forEach(btn => {
+  if (btn.dataset.fire===state.settings.fireType) btn.classList.add('active');
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-fire]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); state.settings.fireType=btn.dataset.fire;
+    candleSection.style.display=state.settings.fireType==='candle'?'block':'none';
+    saveState(); renderFire();
+  });
+});
+candleSection.style.display=state.settings.fireType==='candle'?'block':'none';
+
+
+settingsBtn.addEventListener('click', () => settingsModal.classList.add('open'));
+settingsClose.addEventListener('click', () => settingsModal.classList.remove('open'));
+settingsModal.addEventListener('click', e => { if(e.target===settingsModal) settingsModal.classList.remove('open'); });
+
+document.getElementById('demoWrite').addEventListener('click', () => {
+  isDemoMode = true; state.demoMode = true; saveState();
+  settingsModal.classList.remove('open'); switchPhase('writing');
+});
+document.getElementById('demoBurn').addEventListener('click', () => {
+  isDemoMode = true; state.demoMode = true;
+  state.papers.forEach(p => { if(!p.text){p.text='(intention)'; p.folded=true;} p.sealed=true; });
+  saveState(); settingsModal.classList.remove('open'); switchPhase('burning');
+});
+document.getElementById('demoBurnAll').addEventListener('click', () => {
+  isDemoMode = true; state.demoMode = true;
+  state.papers.forEach(p => { if(!p.text){p.text='(intention)'; p.folded=true;} p.sealed=true; p.burned=false; p.burnedDate=null; });
+  state.burnOrder = null;
+  saveState(); settingsModal.classList.remove('open'); switchPhase('burning');
+});
+document.getElementById('demoReveal').addEventListener('click', () => {
+  isDemoMode = true; state.demoMode = true; saveState();
+  settingsModal.classList.remove('open'); switchPhase('reveal');
+});
+document.getElementById('demoReset').addEventListener('click', () => {
+  const fresh = defaultState();
+  fresh.demoMode = true;
+  fresh.settings = { ...state.settings };
+  fresh.journal  = state.journal; // preserve across resets
+  Object.assign(state, fresh);
+  isDemoMode = true;
+  saveState();
+  settingsModal.classList.remove('open');
+  switchPhase('writing');
+});
+
+// Phase nav
+document.querySelectorAll('.phase-nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    isDemoMode = true; state.demoMode = true; saveState();
+    switchPhase(btn.dataset.phase);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+//  EARLY REVEAL MODAL
+// ─────────────────────────────────────────────────────────────
+const earlyRevealModal  = document.getElementById('earlyRevealModal');
+const earlyRevealCancel = document.getElementById('earlyRevealCancel');
+const earlyRevealConfirm= document.getElementById('earlyRevealConfirm');
+
+function openEarlyRevealModal() { earlyRevealModal.classList.add('open'); }
+earlyRevealCancel.addEventListener('click', () => earlyRevealModal.classList.remove('open'));
+earlyRevealModal.addEventListener('click', e => { if (e.target===earlyRevealModal) earlyRevealModal.classList.remove('open'); });
+earlyRevealConfirm.addEventListener('click', () => {
+  earlyRevealModal.classList.remove('open');
+  switchPhase('reveal');
+});
+
+// Also expose early reveal in demo mode via demoBurn (burn 12 papers first)
+// handled naturally by canEarlyReveal() returning true when papersBurned() >= 12 in demo
+
+// ─────────────────────────────────────────────────────────────
+//  JOURNAL
+// ─────────────────────────────────────────────────────────────
+function saveToJournal() {
+  const year  = getBaseYear();
+  const label = `${year}\u2013${year + 1}`;
+  if (!state.journal.find(e => e.year === label)) {
+    // featured = the one paper shown on the reveal page
+    const remaining = state.papers.filter(p => !p.burned);
+    const featuredPaper = remaining.length > 0 ? remaining[remaining.length - 1] : state.papers[12];
+    const featured = featuredPaper ? (featuredPaper.text || '') : '';
+    const intentions = state.papers.map(p => p.text || '').filter(t => t.trim());
+    if (intentions.length > 0) {
+      state.journal.push({ year: label, savedAt: new Date().toISOString().split('T')[0], featured, intentions });
+      saveState();
+    }
+  }
+}
+
+let journalActiveYear = null;
+function renderJournal() {
+  const tabs    = document.getElementById('journalTabs');
+  const content = document.getElementById('journalContent');
+  if (!state.journal.length) {
+    tabs.innerHTML    = '';
+    content.innerHTML = '<p class="journal-empty">No past years recorded yet.</p>';
+    return;
+  }
+  if (!journalActiveYear || !state.journal.find(e => e.year === journalActiveYear)) {
+    journalActiveYear = state.journal[state.journal.length - 1].year;
+  }
+  tabs.innerHTML = state.journal.map(e =>
+    `<button class="journal-tab${e.year === journalActiveYear ? ' active' : ''}" data-year="${e.year}">${e.year}</button>`
+  ).join('');
+  tabs.querySelectorAll('.journal-tab').forEach(btn =>
+    btn.addEventListener('click', () => { journalActiveYear = btn.dataset.year; renderJournal(); })
+  );
+  const entry = state.journal.find(e => e.year === journalActiveYear);
+  if (!entry) { content.innerHTML = '<p class="journal-empty">Nothing recorded.</p>'; return; }
+  const feat = entry.featured || entry.intentions[0] || '';
+  content.innerHTML = `<div class="journal-featured-wrap">
+    <small>your word carried through the flame</small>
+    <span class="journal-featured" data-year="${entry.year}">${feat}</span>
+  </div>`;
+  content.querySelector('.journal-featured').addEventListener('click', () => openNotebookForYear(entry.year));
+}
+
+document.getElementById('journalToggle').addEventListener('click', () => {
+  const wrap = document.getElementById('journalWrap');
+  wrap.classList.toggle('hidden');
+  if (!wrap.classList.contains('hidden')) renderJournal();
+});
+
+// ─────────────────────────────────────────────────────────────
+//  NOTEBOOK MODAL — pencil-rubbing reveal
+// ─────────────────────────────────────────────────────────────
+let nbIntentions   = [];   // loaded when modal opens
+let nbCurrentPage  = 0;
+const nbRevealedSet = new Set();
+let nbIsRubbing    = false;
+let nbCtx          = null;
+let nbAutoTriggered = false;
+let nbRubbed       = 0;
+
+function nbDrawGraphite() {
+  const canvas = document.getElementById('nbRubCanvas');
+  const ctx = nbCtx, w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(204,192,170,0.94)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(145,133,112,.3)';
+  ctx.lineWidth = 0.65;
+  for (let x = -h; x < w + h; x += 5) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + h, h); ctx.stroke();
+  }
+}
+
+function nbRenderPage() {
+  const page     = document.getElementById('nbPage');
+  const canvas   = document.getElementById('nbRubCanvas');
+  const textEl   = document.getElementById('nbRubText');
+  const hintEl   = document.getElementById('nbRubHint');
+  const pageNumEl= document.getElementById('nbPageNum');
+  const prevBtn  = document.getElementById('nbPrev');
+  const nextBtn  = document.getElementById('nbNext');
+  if (!nbIntentions.length) return;
+  nbCurrentPage = Math.min(nbCurrentPage, nbIntentions.length - 1);
+  textEl.textContent = nbIntentions[nbCurrentPage];
+  pageNumEl.textContent = `${nbCurrentPage + 1} of ${nbIntentions.length}`;
+  prevBtn.disabled = nbCurrentPage === 0;
+  nextBtn.disabled = nbCurrentPage === nbIntentions.length - 1;
+  nbAutoTriggered = nbRevealedSet.has(nbCurrentPage);
+  nbRubbed = 0;
+  requestAnimationFrame(() => {
+    const rect = page.getBoundingClientRect();
+    canvas.width  = Math.round(rect.width)  || 420;
+    canvas.height = Math.round(rect.height) || 180;
+    nbCtx = canvas.getContext('2d');
+    if (nbRevealedSet.has(nbCurrentPage)) {
+      canvas.style.transition = 'none'; canvas.style.opacity = '0';
+      hintEl.style.opacity = '0';
+    } else {
+      canvas.style.transition = ''; canvas.style.opacity = '1';
+      hintEl.style.opacity = '1';
+      nbDrawGraphite();
+    }
+  });
+}
+
+function nbDoRub(x, y) {
+  const canvas = document.getElementById('nbRubCanvas');
+  const hintEl = document.getElementById('nbRubHint');
+  if (!nbCtx || nbRevealedSet.has(nbCurrentPage)) return;
+  nbCtx.globalCompositeOperation = 'destination-out';
+  nbCtx.beginPath();
+  nbCtx.ellipse(x, y, 24, 10, -0.5, 0, Math.PI * 2);
+  nbCtx.fill();
+  nbRubbed += 340;
+  if (!nbAutoTriggered && nbRubbed > canvas.width * canvas.height * 0.48) {
+    nbAutoTriggered = true;
+    nbRevealedSet.add(nbCurrentPage);
+    canvas.style.transition = 'opacity 1.4s ease';
+    canvas.style.opacity = '0';
+    hintEl.style.opacity = '0';
+  }
+}
+
+function openNotebookForYear(yearLabel) {
+  const entry = state.journal.find(e => e.year === yearLabel);
+  if (!entry || !entry.intentions) return;
+  nbIntentions = entry.intentions.slice();
+  nbCurrentPage = 0;
+  nbRevealedSet.clear();
+  nbAutoTriggered = false;
+  nbRubbed = 0;
+  document.getElementById('nbModalYear').textContent = yearLabel;
+  document.getElementById('notebookModal').classList.add('open');
+  setTimeout(() => nbRenderPage(), 40);
+}
+
+// Wire up notebook modal once
+(function initNotebook() {
+  const page    = document.getElementById('nbPage');
+  const prevBtn = document.getElementById('nbPrev');
+  const nextBtn = document.getElementById('nbNext');
+  const pencil  = document.getElementById('pencilCursor');
+  const modal   = document.getElementById('notebookModal');
+
+  page.addEventListener('mouseenter', () => { pencil.style.display = 'block'; });
+  page.addEventListener('mouseleave', () => { pencil.style.display = 'none'; nbIsRubbing = false; });
+  page.addEventListener('mousedown',  () => { nbIsRubbing = true; });
+  document.addEventListener('mouseup', () => { nbIsRubbing = false; });
+  page.addEventListener('mousemove', e => {
+    pencil.style.left = e.clientX + 'px';
+    pencil.style.top  = e.clientY + 'px';
+    if (!nbIsRubbing) return;
+    const r = page.getBoundingClientRect();
+    nbDoRub(e.clientX - r.left, e.clientY - r.top);
+  });
+  page.addEventListener('touchstart', e => {
+    e.preventDefault(); nbIsRubbing = true;
+  }, { passive: false });
+  page.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const r = page.getBoundingClientRect(), t = e.touches[0];
+    nbDoRub(t.clientX - r.left, t.clientY - r.top);
+  }, { passive: false });
+  page.addEventListener('touchend', () => { nbIsRubbing = false; });
+
+  prevBtn.addEventListener('click', () => {
+    if (nbCurrentPage > 0) { nbCurrentPage--; nbRenderPage(); }
+  });
+  nextBtn.addEventListener('click', () => {
+    if (nbCurrentPage < nbIntentions.length - 1) { nbCurrentPage++; nbRenderPage(); }
+  });
+
+  document.getElementById('nbModalClose').addEventListener('click', () => modal.classList.remove('open'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
+}());
+
+// ─────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────
+function init() {
+  appEl.classList.add('bg-night');
+  const phaseOrder = {writing:0, burning:1, reveal:2};
+  const datPhase = detectPhase();
+  const targetPhase = phaseOrder[datPhase] > phaseOrder[state.phase] ? datPhase : state.phase;
+  switchPhase(targetPhase);
+}
+
+init();
+</script>
+
+<div id="pencilCursor" class="pencil-cursor">✏️</div>
+</body>
+</html>

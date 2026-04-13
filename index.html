@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>13 Flames</title>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -951,11 +955,13 @@
     <span class="login-flame">🕯️</span>
     <h1 class="login-title">13 Flames</h1>
     <p class="login-sub">a ritual of intention</p>
-    <div id="loginAccountList" class="login-account-list hidden"></div>
     <div id="loginForm" class="login-form">
-      <input id="loginName" type="text" class="login-input" placeholder="your name" autocomplete="off" spellcheck="false" />
-      <input id="loginPass" type="password" class="login-input hidden" placeholder="passphrase" autocomplete="off" />
+      <input id="loginEmail" type="email" class="login-input" placeholder="your email" autocomplete="email" />
+      <input id="loginPass" type="password" class="login-input" placeholder="passphrase" autocomplete="current-password" />
+      <input id="loginPassConfirm" type="password" class="login-input hidden" placeholder="confirm passphrase" autocomplete="new-password" />
       <button id="loginEnter" class="login-btn">Enter</button>
+      <button id="loginForgot" class="login-new-link">forgot passphrase?</button>
+      <button id="loginToggle" class="login-new-link">new here? &nbsp;create your space</button>
     </div>
     <p id="loginNote" class="login-note"></p>
   </div>
@@ -1200,43 +1206,38 @@ const CANDLE_COLORS = [
 ];
 
 // ─────────────────────────────────────────────────────────────
-//  ACCOUNTS & SESSION
+//  FIREBASE
 // ─────────────────────────────────────────────────────────────
-const ACCOUNTS_KEY = '13flames_accounts';
-const SESSION_KEY  = '13flames_session';
-let currentUser    = null; // { name, key }
+const firebaseConfig = {
+  apiKey:            "AIzaSyD_uuM69jVqgY9023R-5mg_cNVK5oDUo0U",
+  authDomain:        "magicalnights-e1fa6.firebaseapp.com",
+  projectId:         "magicalnights-e1fa6",
+  storageBucket:     "magicalnights-e1fa6.firebasestorage.app",
+  messagingSenderId: "695810492036",
+  appId:             "1:695810492036:web:c7b8ebb7b1ce59b6d4a4d1"
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb   = firebase.firestore();
 
-function getAccounts() {
-  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY)) || []; } catch(e) { return []; }
+let currentUser = null; // Firebase user object
+
+async function loadUserState(uid) {
+  // Try Firestore first, fall back to local cache for offline resilience
+  try {
+    const doc = await fbDb.collection('users').doc(uid).get();
+    if (doc.exists) {
+      const raw = doc.data().state;
+      if (raw) { localStorage.setItem('13flames_cache_' + uid, raw); return JSON.parse(raw); }
+    }
+  } catch(e) {}
+  const cached = localStorage.getItem('13flames_cache_' + uid);
+  return cached ? JSON.parse(cached) : null;
 }
-function saveAccounts(a) { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a)); }
-function userStateKey(name) {
-  return '13flames_v2_' + name.toLowerCase().replace(/\s+/g,'_');
-}
-function simpleHash(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) { h = Math.imul(31, h) + s.charCodeAt(i) | 0; }
-  return h.toString(36);
-}
-// Migrate legacy single-user data to an account
-(function migrateLegacy() {
-  const legacy = localStorage.getItem('13flames_v2');
-  const accts  = getAccounts();
-  if (legacy && accts.length === 0) {
-    const name = 'My Space';
-    accts.push({ name, passphraseHash: null });
-    saveAccounts(accts);
-    localStorage.setItem(userStateKey(name), legacy);
-  }
-}());
 
 // ─────────────────────────────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────────────────────────────
-function loadState() {
-  try { const s = localStorage.getItem(currentUser.key); if (s) return JSON.parse(s); } catch(e) {}
-  return null;
-}
 function defaultState() {
   return {
     papers: Array.from({length:13}, (_,i) => ({
@@ -1250,9 +1251,14 @@ function defaultState() {
     journal: [],
   };
 }
-let state = defaultState(); // placeholder until initApp() runs
+let state = defaultState(); // placeholder until user logs in
 
-function saveState() { if (currentUser) localStorage.setItem(currentUser.key, JSON.stringify(state)); }
+function saveState() {
+  if (!currentUser) return;
+  const raw = JSON.stringify(state);
+  localStorage.setItem('13flames_cache_' + currentUser.uid, raw);
+  fbDb.collection('users').doc(currentUser.uid).set({ state: raw, updatedAt: Date.now() });
+}
 
 // ─────────────────────────────────────────────────────────────
 //  DEMO MODE  (bypasses date restrictions in preview)
@@ -2262,148 +2268,98 @@ function openNotebookForYear(yearLabel) {
 }());
 
 // ─────────────────────────────────────────────────────────────
-//  LOGIN
+//  LOGIN  (Firebase Auth)
 // ─────────────────────────────────────────────────────────────
+let loginMode = 'signin'; // 'signin' | 'signup'
+
+function fbErrorMsg(code) {
+  const map = {
+    'auth/user-not-found':      'no space found for that address',
+    'auth/wrong-password':      'that passphrase doesn\'t match',
+    'auth/invalid-credential':  'email or passphrase incorrect',
+    'auth/email-already-in-use':'a space already exists for that address',
+    'auth/invalid-email':       'please enter a valid email address',
+    'auth/weak-password':       'passphrase must be at least 6 characters',
+    'auth/too-many-requests':   'too many attempts — try again shortly',
+  };
+  return map[code] || 'something went wrong — please try again';
+}
+
+function setLoginNote(msg, isError) {
+  const el = document.getElementById('loginNote');
+  el.textContent = msg;
+  el.className = 'login-note' + (isError ? ' login-error' : '');
+}
+
+function setLoginMode(mode) {
+  loginMode = mode;
+  const conf   = document.getElementById('loginPassConfirm');
+  const enter  = document.getElementById('loginEnter');
+  const toggle = document.getElementById('loginToggle');
+  const forgot = document.getElementById('loginForgot');
+  if (mode === 'signup') {
+    conf.classList.remove('hidden');
+    enter.textContent  = 'Create Your Space';
+    toggle.textContent = 'already have a space?  sign in';
+    forgot.classList.add('hidden');
+  } else {
+    conf.classList.add('hidden');
+    enter.textContent  = 'Enter';
+    toggle.textContent = 'new here? \u00a0create your space';
+    forgot.classList.remove('hidden');
+  }
+  setLoginNote('', false);
+}
+
 function showLogin() {
-  const accts    = getAccounts();
-  const listEl   = document.getElementById('loginAccountList');
-  const formEl   = document.getElementById('loginForm');
-  const nameInp  = document.getElementById('loginName');
-  const passInp  = document.getElementById('loginPass');
-  const noteEl   = document.getElementById('loginNote');
-  const enterBtn = document.getElementById('loginEnter');
-
-  noteEl.className = 'login-note';
-  passInp.classList.add('hidden');
-  passInp.value = '';
-
-  if (accts.length > 0) {
-    listEl.classList.remove('hidden');
-    listEl.innerHTML = accts.map(a =>
-      `<button class="login-account-btn" data-name="${a.name}">${a.name}</button>`
-    ).join('') + `<button class="login-new-link" id="loginNewLink">+ new space</button>`;
-
-    formEl.classList.add('hidden');
-    noteEl.textContent = 'choose your space or create a new one';
-
-    listEl.querySelectorAll('.login-account-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const acct = accts.find(a => a.name === btn.dataset.name);
-        if (!acct) return;
-        if (acct.passphraseHash) {
-          listEl.classList.add('hidden');
-          nameInp.value = acct.name;
-          nameInp.classList.add('hidden');
-          passInp.classList.remove('hidden');
-          formEl.classList.remove('hidden');
-          passInp.focus();
-          noteEl.textContent = 'enter your passphrase';
-        } else {
-          doLogin({ name: acct.name, key: userStateKey(acct.name) });
-        }
-      });
-    });
-
-    document.getElementById('loginNewLink').addEventListener('click', () => {
-      listEl.classList.add('hidden');
-      nameInp.classList.remove('hidden');
-      nameInp.value = ''; passInp.value = '';
-      passInp.classList.add('hidden');
-      formEl.classList.remove('hidden');
-      noteEl.textContent = '';
-      nameInp.focus();
-    });
-  } else {
-    listEl.classList.add('hidden');
-    nameInp.classList.remove('hidden');
-    formEl.classList.remove('hidden');
-    noteEl.textContent = 'begin by sharing your name';
-    nameInp.focus();
-  }
-
-  function attempt() {
-    const name = nameInp.value.trim();
-    if (!name) { noteEl.textContent = 'please share your name'; noteEl.className='login-note login-error'; return; }
-    const existing = accts.find(a => a.name.toLowerCase() === name.toLowerCase());
-    if (existing) {
-      if (existing.passphraseHash) {
-        if (passInp.classList.contains('hidden')) {
-          passInp.classList.remove('hidden'); passInp.focus();
-          noteEl.textContent = 'enter your passphrase'; noteEl.className='login-note';
-          return;
-        }
-        if (simpleHash(passInp.value) !== existing.passphraseHash) {
-          noteEl.textContent = 'passphrase doesn\'t match'; noteEl.className='login-note login-error';
-          passInp.value = ''; passInp.focus(); return;
-        }
-      }
-      doLogin({ name: existing.name, key: userStateKey(existing.name) });
-    } else {
-      // New account — if passphrase field is hidden, reveal it first
-      if (passInp.classList.contains('hidden')) {
-        passInp.classList.remove('hidden'); passInp.placeholder = 'passphrase (optional)'; passInp.focus();
-        noteEl.textContent = 'add a passphrase or leave blank'; noteEl.className='login-note';
-        return;
-      }
-      const pass = passInp.value.trim();
-      accts.push({ name, passphraseHash: pass ? simpleHash(pass) : null });
-      saveAccounts(accts);
-      doLogin({ name, key: userStateKey(name) });
-    }
-  }
-
-  enterBtn.addEventListener('click', attempt);
-  nameInp.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
-  passInp.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
-}
-
-function doLogin(user) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
-  initApp(user);
-}
-
-// ─────────────────────────────────────────────────────────────
-//  INIT APP (called after login)
-// ─────────────────────────────────────────────────────────────
-function initApp(user) {
-  currentUser = user;
-
-  // Load state for this user
-  const loaded = loadState();
-  if (loaded) {
-    state = loaded;
-    state.papers.forEach(p => { if (p.burnedDate === undefined) p.burnedDate = null; });
-    if (state.burnOrder === undefined) state.burnOrder = null;
-    if (state.demoMode === undefined) state.demoMode = false;
-    if (!state.journal) state.journal = [];
-  } else {
-    state = defaultState();
-  }
-  isDemoMode = state.demoMode || false;
-
-  // Logout button
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    sessionStorage.removeItem(SESSION_KEY);
-    settingsModal.classList.remove('open');
-    // Reset state placeholder so app doesn't re-render stale data
-    state = defaultState(); currentUser = null; isDemoMode = false;
-    const ls = document.getElementById('loginScreen');
-    ls.style.opacity = '0'; ls.style.display = 'flex';
-    ls.classList.remove('fade-out');
-    requestAnimationFrame(() => { ls.style.transition='none'; ls.style.opacity='1'; });
-    showLogin();
-  }, { once: true });
-
-  // Settings UI needs state to be ready
-  initSettingsUI();
-
-  // Hide login screen
   const ls = document.getElementById('loginScreen');
-  ls.classList.add('fade-out');
-  setTimeout(() => { ls.style.display = 'none'; }, 900);
+  ls.style.display = 'flex';
+  ls.classList.remove('fade-out');
+  requestAnimationFrame(() => { ls.style.opacity = '1'; });
 
-  // Start the app
-  init();
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPass').value  = '';
+  document.getElementById('loginPassConfirm').value = '';
+  setLoginMode('signin');
+  setTimeout(() => document.getElementById('loginEmail').focus(), 100);
+
+  async function attempt() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPass').value;
+    const conf  = document.getElementById('loginPassConfirm').value;
+    if (!email) { setLoginNote('please enter your email', true); return; }
+    if (!pass)  { setLoginNote('please enter your passphrase', true); return; }
+    setLoginNote(loginMode === 'signup' ? 'creating your space…' : 'entering…', false);
+    try {
+      if (loginMode === 'signup') {
+        if (pass !== conf) { setLoginNote('passphrases don\'t match', true); return; }
+        await fbAuth.createUserWithEmailAndPassword(email, pass);
+      } else {
+        await fbAuth.signInWithEmailAndPassword(email, pass);
+      }
+      // onAuthStateChanged takes it from here
+    } catch(e) { setLoginNote(fbErrorMsg(e.code), true); }
+  }
+
+  // Bind once — clone nodes to prevent stacking listeners on re-show
+  ['loginEnter','loginEmail','loginPass','loginPassConfirm','loginToggle','loginForgot']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+    });
+
+  document.getElementById('loginEnter').addEventListener('click', attempt);
+  document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPass').focus(); });
+  document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') { if(loginMode==='signup') document.getElementById('loginPassConfirm').focus(); else attempt(); } });
+  document.getElementById('loginPassConfirm').addEventListener('keydown', e => { if(e.key==='Enter') attempt(); });
+  document.getElementById('loginToggle').addEventListener('click', () => setLoginMode(loginMode==='signin'?'signup':'signin'));
+  document.getElementById('loginForgot').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) { setLoginNote('enter your email first', true); return; }
+    try { await fbAuth.sendPasswordResetEmail(email); setLoginNote('reset link sent to your email', false); }
+    catch(e) { setLoginNote(fbErrorMsg(e.code), true); }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2417,18 +2373,42 @@ function init() {
   switchPhase(targetPhase);
 }
 
-// ── Boot: check session or show login ──
-(function boot() {
-  try {
-    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY));
-    if (session && session.name && session.key) {
-      document.getElementById('loginScreen').style.display = 'none';
-      initApp(session);
-      return;
-    }
-  } catch(e) {}
-  showLogin();
-}());
+// ── Firebase auth state drives everything ──
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  settingsModal.classList.remove('open');
+  state = defaultState(); currentUser = null; isDemoMode = false;
+  fbAuth.signOut();
+});
+
+fbAuth.onAuthStateChanged(async (user) => {
+  if (!user) { showLogin(); return; }
+
+  currentUser = user;
+  const loaded = await loadUserState(user.uid);
+  if (loaded) {
+    state = loaded;
+    state.papers.forEach(p => { if (p.burnedDate === undefined) p.burnedDate = null; });
+    if (state.burnOrder === undefined) state.burnOrder = null;
+    if (state.demoMode === undefined) state.demoMode = false;
+    if (!state.journal) state.journal = [];
+  } else {
+    state = defaultState();
+  }
+  isDemoMode = state.demoMode || false;
+
+  // Update account display in settings
+  const nameEl = document.getElementById('settingsAccountName');
+  if (nameEl) nameEl.textContent = user.email;
+
+  initSettingsUI();
+
+  // Fade out login screen
+  const ls = document.getElementById('loginScreen');
+  ls.classList.add('fade-out');
+  setTimeout(() => { ls.style.display = 'none'; }, 900);
+
+  init();
+});
 </script>
 
 <div id="pencilCursor" class="pencil-cursor">✏️</div>

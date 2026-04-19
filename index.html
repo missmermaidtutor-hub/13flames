@@ -366,6 +366,19 @@
       pointer-events:none;
     }
 
+    /* Blue Flame */
+    .blueflame-scene {
+      position:relative; width:220px; height:280px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .blueflame-video {
+      width:220px; height:280px;
+      object-fit:cover;
+      object-position:center center;
+      mix-blend-mode:screen;
+      pointer-events:none;
+    }
+
     .candle-body {
       width:46px; border-radius:5px 5px 3px 3px; position:relative;
       box-shadow:
@@ -1096,6 +1109,7 @@
         <button class="opt-btn active" data-fire="campfire">Campfire</button>
         <button class="opt-btn" data-fire="candle">Candle</button>
         <button class="opt-btn" data-fire="candlestick">Candlestick</button>
+        <button class="opt-btn" data-fire="blueflame">Blue Flame</button>
       </div>
     </div>
     <div class="settings-section" id="candleColorSection" style="display:none">
@@ -1521,13 +1535,29 @@ function candlestickHTML() {
     </video>
   </div>`;
 }
+function blueFlameHTML() {
+  return `<div class="blueflame-scene">
+    <video class="blueflame-video" id="blueFlameVideo" autoplay muted playsinline
+      onerror="this.style.display='none'">
+      <source src="Blue fire 1.mp4" type="video/mp4">
+    </video>
+  </div>`;
+}
 function renderFire() {
   const {fireType,candleColor}=state.settings;
-  const BG = { campfire:'#271814', candle:'#442f29', candlestick:'#2c100d' };
+  const BG = { campfire:'#271814', candle:'#442f29', candlestick:'#2c100d', blueflame:'#080c1a' };
   appEl.style.background = BG[fireType] || '#442f29';
-  if (fireType==='campfire')        fireContainer.innerHTML = campfireHTML();
+  if (fireType==='campfire')         fireContainer.innerHTML = campfireHTML();
   else if (fireType==='candlestick') fireContainer.innerHTML = candlestickHTML();
-  else                              fireContainer.innerHTML = candleHTML(candleColor);
+  else if (fireType==='blueflame')   fireContainer.innerHTML = blueFlameHTML();
+  else                               fireContainer.innerHTML = candleHTML(candleColor);
+  if (fireType==='blueflame') {
+    const vid = document.getElementById('blueFlameVideo');
+    if (vid) {
+      vid.addEventListener('loadedmetadata', () => { vid.currentTime = 12; });
+      vid.addEventListener('timeupdate', () => { if (vid.currentTime >= 17) vid.currentTime = 12; });
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

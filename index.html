@@ -799,6 +799,17 @@
     }
     .login-note.login-error { color:rgba(220,100,80,.8); }
 
+    /* ── PROFILE MODAL ──────────────────────────── */
+    .profile-field { margin-bottom:.85rem; }
+    .profile-label {
+      display:block; font-size:.68rem; letter-spacing:2px; text-transform:uppercase;
+      color:rgba(232,213,183,.5); margin-bottom:.35rem;
+    }
+    .profile-value {
+      color:rgba(232,213,183,.85); font-size:.9rem; font-style:italic;
+      padding:.3rem 0;
+    }
+
     /* ── PHASE NAV ──────────────────────────────── */
     .phase-nav {
       display:flex; align-items:center; justify-content:center;
@@ -969,6 +980,7 @@
     <h1 class="login-title">13 Flames</h1>
     <p class="login-sub">a ritual of intention</p>
     <div id="loginForm" class="login-form">
+      <input id="loginName" type="text" class="login-input hidden" placeholder="your name" autocomplete="name" />
       <input id="loginEmail" type="email" class="login-input" placeholder="your email" autocomplete="email" />
       <input id="loginPass" type="password" class="login-input" placeholder="passphrase" autocomplete="current-password" />
       <input id="loginPassConfirm" type="password" class="login-input hidden" placeholder="confirm passphrase" autocomplete="new-password" />
@@ -977,6 +989,37 @@
       <button id="loginToggle" class="login-new-link">new here? &nbsp;create your space</button>
     </div>
     <p id="loginNote" class="login-note"></p>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal-box" style="max-width:360px;">
+    <h2 class="modal-title" style="margin-bottom:1.4rem;">Your Profile</h2>
+    <div class="profile-field">
+      <label class="profile-label">Name</label>
+      <input id="profileName" type="text" class="login-input" style="max-width:100%;text-align:left;" placeholder="your name" autocomplete="name" />
+    </div>
+    <div class="profile-field">
+      <label class="profile-label">Email</label>
+      <p id="profileEmail" class="profile-value"></p>
+    </div>
+    <hr class="divider" style="margin:1.4rem 0;" />
+    <h3 style="font-size:.8rem;letter-spacing:2px;color:var(--gold);margin-bottom:1rem;text-transform:uppercase;">Change Passphrase</h3>
+    <div class="profile-field">
+      <input id="profilePassCurrent" type="password" class="login-input" style="max-width:100%;text-align:left;" placeholder="current passphrase" autocomplete="current-password" />
+    </div>
+    <div class="profile-field">
+      <input id="profilePassNew" type="password" class="login-input" style="max-width:100%;text-align:left;" placeholder="new passphrase" autocomplete="new-password" />
+    </div>
+    <div class="profile-field">
+      <input id="profilePassConfirm" type="password" class="login-input" style="max-width:100%;text-align:left;" placeholder="confirm new passphrase" autocomplete="new-password" />
+    </div>
+    <p id="profileNote" class="login-note" style="text-align:left;margin-bottom:1rem;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="profileClose">Cancel</button>
+      <button class="btn btn-gold" id="profileSave">Save</button>
+    </div>
   </div>
 </div>
 
@@ -1131,6 +1174,7 @@
       <h3>Account</h3>
       <p style="color:rgba(232,213,183,.6);font-size:.85rem;margin-bottom:.65rem;font-style:italic;" id="settingsAccountName"></p>
       <div class="option-row">
+        <button class="opt-btn btn-sm" id="editProfileBtn">Edit Profile</button>
         <button class="opt-btn btn-sm" id="logoutBtn">Sign Out</button>
       </div>
     </div>
@@ -2323,16 +2367,19 @@ function setLoginNote(msg, isError) {
 
 function setLoginMode(mode) {
   loginMode = mode;
+  const name   = document.getElementById('loginName');
   const conf   = document.getElementById('loginPassConfirm');
   const enter  = document.getElementById('loginEnter');
   const toggle = document.getElementById('loginToggle');
   const forgot = document.getElementById('loginForgot');
   if (mode === 'signup') {
+    name.classList.remove('hidden');
     conf.classList.remove('hidden');
     enter.textContent  = 'Create Your Space';
     toggle.textContent = 'already have a space?  sign in';
     forgot.classList.add('hidden');
   } else {
+    name.classList.add('hidden');
     conf.classList.add('hidden');
     enter.textContent  = 'Enter';
     toggle.textContent = 'new here? \u00a0create your space';
@@ -2347,6 +2394,7 @@ function showLogin() {
   ls.classList.remove('fade-out');
   requestAnimationFrame(() => { ls.style.opacity = '1'; });
 
+  document.getElementById('loginName').value  = '';
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPass').value  = '';
   document.getElementById('loginPassConfirm').value = '';
@@ -2363,7 +2411,9 @@ function showLogin() {
     try {
       if (loginMode === 'signup') {
         if (pass !== conf) { setLoginNote('passphrases don\'t match', true); return; }
-        await fbAuth.createUserWithEmailAndPassword(email, pass);
+        const name = document.getElementById('loginName').value.trim();
+        const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
+        if (name) await cred.user.updateProfile({ displayName: name });
       } else {
         await fbAuth.signInWithEmailAndPassword(email, pass);
       }
@@ -2372,7 +2422,7 @@ function showLogin() {
   }
 
   // Bind once — clone nodes to prevent stacking listeners on re-show
-  ['loginEnter','loginEmail','loginPass','loginPassConfirm','loginToggle','loginForgot']
+  ['loginName','loginEnter','loginEmail','loginPass','loginPassConfirm','loginToggle','loginForgot']
     .forEach(id => {
       const el = document.getElementById(id);
       const fresh = el.cloneNode(true);
@@ -2403,6 +2453,80 @@ function init() {
   switchPhase(targetPhase);
 }
 
+// ─────────────────────────────────────────────────────────────
+//  PROFILE MODAL
+// ─────────────────────────────────────────────────────────────
+function setProfileNote(msg, isError) {
+  const el = document.getElementById('profileNote');
+  el.textContent = msg;
+  el.className = 'login-note' + (isError ? ' login-error' : '');
+}
+
+function openProfileModal() {
+  const modal = document.getElementById('profileModal');
+  document.getElementById('profileName').value = currentUser.displayName || '';
+  document.getElementById('profileEmail').textContent = currentUser.email;
+  document.getElementById('profilePassCurrent').value = '';
+  document.getElementById('profilePassNew').value = '';
+  document.getElementById('profilePassConfirm').value = '';
+  setProfileNote('', false);
+  modal.classList.add('open');
+}
+
+document.getElementById('editProfileBtn').addEventListener('click', () => {
+  document.getElementById('settingsModal').classList.remove('open');
+  openProfileModal();
+});
+document.getElementById('profileClose').addEventListener('click', () => {
+  document.getElementById('profileModal').classList.remove('open');
+});
+document.getElementById('profileModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('profileModal'))
+    document.getElementById('profileModal').classList.remove('open');
+});
+
+document.getElementById('profileSave').addEventListener('click', async () => {
+  const newName    = document.getElementById('profileName').value.trim();
+  const curPass    = document.getElementById('profilePassCurrent').value;
+  const newPass    = document.getElementById('profilePassNew').value;
+  const confPass   = document.getElementById('profilePassConfirm').value;
+  const changingPw = curPass || newPass || confPass;
+
+  setProfileNote('saving…', false);
+  try {
+    // Save display name if changed
+    if (newName !== (currentUser.displayName || '')) {
+      await currentUser.updateProfile({ displayName: newName });
+    }
+
+    // Change password if fields filled
+    if (changingPw) {
+      if (!curPass) { setProfileNote('enter your current passphrase', true); return; }
+      if (!newPass)  { setProfileNote('enter a new passphrase', true); return; }
+      if (newPass !== confPass) { setProfileNote('new passphrases don\'t match', true); return; }
+      if (newPass.length < 6)  { setProfileNote('passphrase must be at least 6 characters', true); return; }
+      // Re-authenticate then update
+      const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, curPass);
+      await currentUser.reauthenticateWithCredential(cred);
+      await currentUser.updatePassword(newPass);
+    }
+
+    // Refresh account display in settings
+    const nameEl = document.getElementById('settingsAccountName');
+    if (nameEl) nameEl.textContent = currentUser.displayName
+      ? `${currentUser.displayName}  ·  ${currentUser.email}`
+      : currentUser.email;
+
+    setProfileNote('saved', false);
+    setTimeout(() => document.getElementById('profileModal').classList.remove('open'), 800);
+  } catch(e) {
+    const msg = e.code === 'auth/wrong-password' ? 'current passphrase is incorrect'
+              : e.code === 'auth/requires-recent-login' ? 'please sign out and back in, then try again'
+              : e.message || 'something went wrong';
+    setProfileNote(msg, true);
+  }
+});
+
 // ── Firebase auth state drives everything ──
 document.getElementById('logoutBtn').addEventListener('click', () => {
   settingsModal.classList.remove('open');
@@ -2428,7 +2552,7 @@ fbAuth.onAuthStateChanged(async (user) => {
 
   // Update account display in settings
   const nameEl = document.getElementById('settingsAccountName');
-  if (nameEl) nameEl.textContent = user.email;
+  if (nameEl) nameEl.textContent = user.displayName ? `${user.displayName}  ·  ${user.email}` : user.email;
 
   initSettingsUI();
 

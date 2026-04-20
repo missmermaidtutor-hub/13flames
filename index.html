@@ -729,6 +729,27 @@
       .env-body    { height:46px; }
       .env-flap    { border-left-width:36px; border-right-width:36px; border-top-width:20px; }
       .counter-num { font-size:1.4rem; }
+
+      /* Header — push content left so it doesn't slide under the tr-cluster */
+      header { padding: 1.4rem 88px 1rem 1rem; }
+      .title { font-size: clamp(1.6rem,7vw,2.4rem); }
+      .subtitle { font-size: .72rem; padding-right: 0; }
+      .tr-cluster { top: .7rem; right: .7rem; gap: .3rem; }
+      .day-counter { min-width: 58px; padding: .3rem .4rem; }
+      .counter-num { font-size: 1.2rem; }
+      .settings-btn { width: 30px; height: 30px; font-size: .85rem; }
+
+      /* Phase nav — tighter on mobile */
+      .phase-nav { gap: .25rem; padding: .1rem 0 .9rem; }
+      .phase-nav-btn { font-size: .65rem; letter-spacing: 1.5px; }
+      .phase-nav-sep { font-size: .55rem; }
+
+      /* Releasing phase — prevent overlap, tighten spacing */
+      .burning-phase { padding: .5rem .75rem 1.5rem; }
+      .burn-instruction { font-size: .78rem; margin-bottom: .5rem; padding: 0 .5rem; }
+      .fire-drop-zone { margin-bottom: .5rem; }
+      .burn-row { flex-direction: column; align-items: center; gap: .5rem; }
+      .envelope-strip { justify-content: center; flex-wrap: wrap; }
     }
 
     /* ── LOGIN SCREEN ───────────────────────────── */

@@ -1082,7 +1082,7 @@
   <div class="setup-content">
     <span class="login-flame">🕯️</span>
     <h1 class="login-title">Begin Your Practice</h1>
-    <p class="setup-body">Choose the night your burning ritual begins. In the seven days before, your writing space opens — time to sit with what you truly want to call in.</p>
+    <p class="setup-body">Choose the night your releasing ritual begins. In the seven days before, your intention space opens — time to sit with what you truly want to call in.</p>
     <p id="setupPreview" class="setup-preview"></p>
     <button id="setupBegin" class="login-btn" style="margin-top:1.4rem;">Begin the Ritual</button>
     <div class="setup-date-wrap hidden" id="setupDateWrap">
@@ -1129,7 +1129,7 @@
   <header>
     <h1 class="title">13 Flames</h1>
     <p class="subtitle" id="subtitleText">Set your intentions for the turning of the year</p>
-    <div class="phase-badge" id="phaseBadge">Writing</div>
+    <div class="phase-badge" id="phaseBadge">Intention</div>
 
     <div class="tr-cluster">
       <div class="day-counter hidden" id="dayCounter">
@@ -1141,9 +1141,9 @@
   </header>
 
   <nav class="phase-nav" id="phaseNav">
-    <button class="phase-nav-btn nav-active" data-phase="writing">Writing</button>
+    <button class="phase-nav-btn nav-active" data-phase="writing">Intention</button>
     <span class="phase-nav-sep">·</span>
-    <button class="phase-nav-btn" data-phase="burning">Burning</button>
+    <button class="phase-nav-btn" data-phase="burning">Releasing</button>
     <span class="phase-nav-sep">·</span>
     <button class="phase-nav-btn" data-phase="reveal">Reveal</button>
   </nav>
@@ -1271,9 +1271,9 @@
     <div class="settings-section demo-row">
       <h3>Preview Phases</h3>
       <div class="option-row">
-        <button class="opt-btn btn-sm" id="demoWrite">Writing</button>
-        <button class="opt-btn btn-sm" id="demoBurn">Burning</button>
-        <button class="opt-btn btn-sm" id="demoBurnAll">Burn All</button>
+        <button class="opt-btn btn-sm" id="demoWrite">Intention</button>
+        <button class="opt-btn btn-sm" id="demoBurn">Releasing</button>
+        <button class="opt-btn btn-sm" id="demoBurnAll">Release All</button>
         <button class="opt-btn btn-sm" id="demoReveal">Reveal</button>
         <button class="opt-btn btn-sm" id="demoReset" style="color:#e87070;">Reset All</button>
       </div>
@@ -2028,7 +2028,7 @@ function switchPhase(phase) {
   if (phase === 'writing') {
     writingPhase.classList.remove('hidden');
     initJournal();
-    phaseBadge.textContent = 'Writing';
+    phaseBadge.textContent = 'Intention';
     subtitleText.textContent = 'Set your intentions for the turning of the year';
     dayCounterEl.classList.add('hidden');
     renderGrid();
@@ -2053,7 +2053,7 @@ function switchPhase(phase) {
     }
 
     burningPhase.classList.remove('hidden');
-    phaseBadge.textContent = 'Burning';
+    phaseBadge.textContent = 'Releasing';
     subtitleText.innerHTML = 'Release your intentions to the universe. Let 12 be tended and sowed without your hand.<br><em style="font-size:.82em;opacity:.85">Save the last one to tend yourself &mdash; your task for the upcoming year.</em>';
     renderFire();
     setupDragDrop();

@@ -1062,13 +1062,13 @@
     <span class="login-flame">🕯️</span>
     <h1 class="login-title">Begin Your Practice</h1>
     <p class="setup-body">Choose the night your burning ritual begins. In the seven days before, your writing space opens — time to sit with what you truly want to call in.</p>
-    <div class="setup-date-wrap">
-      <label class="profile-label" style="margin-bottom:.6rem;">First night of burning</label>
-      <input id="setupStartDate" type="date" class="login-input setup-date-input" />
-    </div>
     <p id="setupPreview" class="setup-preview"></p>
     <button id="setupBegin" class="login-btn" style="margin-top:1.4rem;">Begin the Ritual</button>
-    <button id="setupSolstice" class="login-new-link" style="margin-top:.6rem;">follow the winter solstice (Dec 21)</button>
+    <div class="setup-date-wrap hidden" id="setupDateWrap">
+      <label class="profile-label" style="margin-bottom:.6rem; margin-top:1rem;">Choose your first night</label>
+      <input id="setupStartDate" type="date" class="login-input setup-date-input" />
+    </div>
+    <button id="setupCantWait" class="login-new-link" style="margin-top:.8rem;">can't wait — choose a sooner window</button>
   </div>
 </div>
 
@@ -2578,28 +2578,50 @@ function updateSetupPreview() {
   const start   = new Date(val + 'T00:00:00');
   const writing = new Date(start); writing.setDate(writing.getDate() - 7);
   const reveal  = new Date(start); reveal.setDate(reveal.getDate() + 12);
-  el.innerHTML = `Writing opens <strong>${fmtDate(writing)}</strong><br>Burning begins <strong>${fmtDate(start)}</strong><br>Revealed <strong>${fmtDate(reveal)}</strong>`;
+  const isSolstice = val === nextSolstice();
+  const startLabel = isSolstice ? `Winter Solstice — <strong>${fmtDate(start)}</strong>` : `<strong>${fmtDate(start)}</strong>`;
+  el.innerHTML = `Intentions open <strong>${fmtDate(writing)}</strong><br>Releasing begins ${startLabel}<br>Revealed <strong>${fmtDate(reveal)}</strong>`;
+}
+
+function nextSolstice() {
+  const now = new Date();
+  const year = (now.getMonth() === 11 && now.getDate() >= 21) ? now.getFullYear() + 1 : now.getFullYear();
+  return `${year}-12-21`;
 }
 
 function showSetup() {
-  const overlay = document.getElementById('setupScreen');
+  const overlay   = document.getElementById('setupScreen');
   overlay.classList.remove('hidden');
+
+  // Default to next winter solstice
+  const solsticeVal = nextSolstice();
   const dateInput = document.getElementById('setupStartDate');
-  // Suggest 8 days from now so writing opens today
-  const suggested = new Date(); suggested.setDate(suggested.getDate() + 8);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr  = new Date().toISOString().split('T')[0];
   dateInput.min   = todayStr;
-  dateInput.value = suggested.toISOString().split('T')[0];
+  dateInput.value = solsticeVal;
+  document.getElementById('setupDateWrap').classList.add('hidden');
   updateSetupPreview();
 
-  const freshDate   = dateInput.cloneNode(true);
-  dateInput.parentNode.replaceChild(freshDate, dateInput);
-  const freshBegin  = document.getElementById('setupBegin').cloneNode(true);
-  document.getElementById('setupBegin').parentNode.replaceChild(freshBegin, document.getElementById('setupBegin'));
-  const freshSol    = document.getElementById('setupSolstice').cloneNode(true);
-  document.getElementById('setupSolstice').parentNode.replaceChild(freshSol, document.getElementById('setupSolstice'));
+  // Clone nodes to prevent listener stacking on re-show
+  ['setupStartDate','setupBegin','setupCantWait'].forEach(id => {
+    const el = document.getElementById(id);
+    const fresh = el.cloneNode(true);
+    el.parentNode.replaceChild(fresh, el);
+  });
 
   document.getElementById('setupStartDate').addEventListener('input', updateSetupPreview);
+
+  document.getElementById('setupCantWait').addEventListener('click', () => {
+    const wrap = document.getElementById('setupDateWrap');
+    wrap.classList.remove('hidden');
+    // Suggest 8 days from now so writing window opens today
+    const sooner = new Date(); sooner.setDate(sooner.getDate() + 8);
+    const dateEl = document.getElementById('setupStartDate');
+    dateEl.value = sooner.toISOString().split('T')[0];
+    updateSetupPreview();
+    dateEl.focus();
+    document.getElementById('setupCantWait').style.display = 'none';
+  });
 
   document.getElementById('setupBegin').addEventListener('click', () => {
     const val = document.getElementById('setupStartDate').value;
@@ -2609,14 +2631,6 @@ function showSetup() {
     saveState();
     document.getElementById('setupScreen').classList.add('hidden');
     init();
-  });
-
-  document.getElementById('setupSolstice').addEventListener('click', () => {
-    const now = new Date();
-    const year = now.getMonth() >= 11 && now.getDate() >= 21 ? now.getFullYear() + 1 : now.getFullYear();
-    const solstice = `${year}-12-21`;
-    document.getElementById('setupStartDate').value = solstice;
-    updateSetupPreview();
   });
 }
 

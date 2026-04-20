@@ -1430,7 +1430,7 @@ function getStartDate() {
 
 function getRevealDate() {
   const d = new Date(getStartDate());
-  d.setDate(d.getDate() + 13);
+  d.setDate(d.getDate() + 12);
   return d;
 }
 
@@ -2577,7 +2577,7 @@ function updateSetupPreview() {
   if (!val) { el.textContent = ''; return; }
   const start   = new Date(val + 'T00:00:00');
   const writing = new Date(start); writing.setDate(writing.getDate() - 7);
-  const reveal  = new Date(start); reveal.setDate(reveal.getDate() + 13);
+  const reveal  = new Date(start); reveal.setDate(reveal.getDate() + 12);
   el.innerHTML = `Writing opens <strong>${fmtDate(writing)}</strong><br>Burning begins <strong>${fmtDate(start)}</strong><br>Revealed <strong>${fmtDate(reveal)}</strong>`;
 }
 

@@ -799,6 +799,70 @@
     }
     .login-note.login-error { color:rgba(220,100,80,.8); }
 
+    /* ── SETUP SCREEN ───────────────────────────── */
+    .setup-screen {
+      position:fixed; inset:0; z-index:290;
+      display:flex; align-items:center; justify-content:center;
+      background:#180800;
+    }
+    .setup-screen.hidden { display:none; }
+    .setup-content { text-align:center; width:min(420px,90vw); padding:2rem 1rem; }
+    .setup-body {
+      font-size:.88rem; color:rgba(232,213,183,.72); line-height:1.7;
+      margin-bottom:2rem; font-style:italic;
+    }
+    .setup-date-wrap { display:flex; flex-direction:column; align-items:center; margin-bottom:.8rem; }
+    .setup-date-input {
+      max-width:220px; text-align:center;
+      color-scheme: dark;
+    }
+    .setup-preview {
+      font-size:.75rem; color:rgba(232,213,183,.55); letter-spacing:.5px;
+      min-height:1.2rem; line-height:1.6; margin-bottom:.4rem;
+    }
+    .setup-preview strong { color:rgba(201,168,76,.85); }
+
+    /* ── RITUAL COUNTDOWN ───────────────────────── */
+    .ritual-countdown {
+      font-size:.78rem; letter-spacing:2px; text-transform:uppercase;
+      color:rgba(201,168,76,.7); margin-bottom:1rem; text-align:center;
+    }
+
+    /* ── REFLECTION JOURNAL ─────────────────────── */
+    .journal-section { width:100%; max-width:860px; margin-top:1.8rem; }
+    .journal-toggle {
+      background:none; border:none; cursor:pointer;
+      font-family:'Georgia',serif; font-size:.72rem; letter-spacing:2px;
+      text-transform:uppercase; color:rgba(232,213,183,.4);
+      padding:.3rem 0; transition:color .2s;
+    }
+    .journal-toggle:hover { color:rgba(232,213,183,.7); }
+    .journal-body { margin-top:.9rem; }
+    .journal-hint {
+      font-size:.75rem; color:rgba(232,213,183,.38); font-style:italic;
+      margin-bottom:.65rem; letter-spacing:.3px;
+    }
+    .journal-textarea {
+      width:100%; min-height:180px; background:rgba(255,255,255,.03);
+      border:1px solid rgba(201,168,76,.15); border-radius:3px;
+      color:rgba(232,213,183,.85); font-family:'Georgia',serif; font-size:.92rem;
+      line-height:1.75; padding:1rem 1.1rem; resize:vertical; outline:none;
+      transition:border-color .2s; box-sizing:border-box;
+    }
+    .journal-textarea:focus { border-color:rgba(201,168,76,.35); }
+    .journal-textarea::placeholder { color:rgba(232,213,183,.2); font-style:italic; }
+
+    /* ── INTENTION FLOAT BUTTON ─────────────────── */
+    .intention-float-btn {
+      position:fixed; z-index:500;
+      background:rgba(201,168,76,.9); color:#1a0e00;
+      border:none; border-radius:3px; padding:.35rem .85rem;
+      font-family:'Georgia',serif; font-size:.75rem; letter-spacing:1px;
+      cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,.4);
+      transition:opacity .15s; white-space:nowrap;
+    }
+    .intention-float-btn.hidden { display:none; }
+
     /* ── PROFILE MODAL ──────────────────────────── */
     .profile-field { margin-bottom:.85rem; }
     .profile-label {
@@ -992,6 +1056,22 @@
   </div>
 </div>
 
+<!-- SETUP SCREEN -->
+<div id="setupScreen" class="setup-screen hidden">
+  <div class="setup-content">
+    <span class="login-flame">🕯️</span>
+    <h1 class="login-title">Begin Your Practice</h1>
+    <p class="setup-body">Choose the night your burning ritual begins. In the seven days before, your writing space opens — time to sit with what you truly want to call in.</p>
+    <div class="setup-date-wrap">
+      <label class="profile-label" style="margin-bottom:.6rem;">First night of burning</label>
+      <input id="setupStartDate" type="date" class="login-input setup-date-input" />
+    </div>
+    <p id="setupPreview" class="setup-preview"></p>
+    <button id="setupBegin" class="login-btn" style="margin-top:1.4rem;">Begin the Ritual</button>
+    <button id="setupSolstice" class="login-new-link" style="margin-top:.6rem;">follow the winter solstice (Dec 21)</button>
+  </div>
+</div>
+
 <!-- PROFILE MODAL -->
 <div class="modal-overlay" id="profileModal">
   <div class="modal-box" style="max-width:360px;">
@@ -1061,6 +1141,14 @@
       </div>
       <p class="box-hint" id="writingBoxHint">Fold your intentions to tuck them inside</p>
     </div>
+    <div class="ritual-countdown hidden" id="ritualCountdown"></div>
+    <div class="journal-section" id="journalSection">
+      <button class="journal-toggle" id="journalToggle">◦ reflection journal</button>
+      <div class="journal-body hidden" id="journalBody">
+        <p class="journal-hint">Write freely. When something wants to become an intention, select it and press the button that appears.</p>
+        <textarea class="journal-textarea" id="journalTextarea" placeholder="What do you want to call in? What are you ready to release? What does this next chapter ask of you?"></textarea>
+      </div>
+    </div>
   </div>
 
   <!-- BURNING PHASE -->
@@ -1098,7 +1186,7 @@
 
     <!-- JOURNAL (quiet / optional) -->
     <div class="journal-toggle-row">
-      <button class="journal-toggle-btn" id="journalToggle">◦ &nbsp;journal</button>
+      <button class="journal-toggle-btn" id="revealJournalToggle">◦ &nbsp;journal</button>
     </div>
     <div class="journal-wrap hidden" id="journalWrap">
       <div class="journal-tabs" id="journalTabs"></div>
@@ -1307,6 +1395,9 @@ function defaultState() {
     burnOrder: null,
     demoMode: false,
     journal: [],
+    ritualStartDate: null,
+    ritualSetup: false,
+    journalNotes: '',
   };
 }
 let state = defaultState(); // placeholder until user logs in
@@ -1326,85 +1417,86 @@ let isDemoMode = false;
 // ─────────────────────────────────────────────────────────────
 //  DATE UTILITIES
 // ─────────────────────────────────────────────────────────────
-// Solstice = Dec 21 of the relevant year.
-// Reveal   = Dec 21 + 12 days = Jan 2 of the following year.
-// Day 1 = Dec 21 | Day 13 = Jan 2
-
-function getBaseYear() {
-  // If we're in January (possibly mid-ritual), the solstice was last year.
+function getStartDate() {
+  if (state.ritualStartDate) {
+    const d = new Date(state.ritualStartDate + 'T00:00:00');
+    return d;
+  }
+  // Legacy fallback: Dec 21
   const m = new Date().getMonth();
-  return m === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear();
+  const y = m === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear();
+  return new Date(y, 11, 21, 0, 0, 0);
 }
 
-function getSolsticeDate() {
-  return new Date(getBaseYear(), 11, 21, 0, 0, 0); // Dec 21 midnight
-}
-function getSolsticeSunset() {
-  return new Date(getBaseYear(), 11, 21, 18, 0, 0); // Dec 21 6 pm — writing closes
-}
 function getRevealDate() {
-  const d = new Date(getBaseYear(), 11, 21);
-  d.setDate(d.getDate() + 12); // Jan 2
+  const d = new Date(getStartDate());
+  d.setDate(d.getDate() + 13);
   return d;
 }
 
-// 1-indexed day number within the ritual (1 = Dec 21 … 13 = Jan 2)
+function getWritingOpenDate() {
+  const d = new Date(getStartDate());
+  d.setDate(d.getDate() - 7);
+  return d;
+}
+
 function dayNumber() {
   const today = new Date(); today.setHours(0,0,0,0);
-  const sol   = getSolsticeDate();
-  const diff  = Math.round((today - sol) / 864e5);
+  const start = getStartDate(); start.setHours(0,0,0,0);
+  const diff = Math.round((today - start) / 864e5);
   return Math.max(1, Math.min(diff + 1, 13));
 }
 
-// How many papers are ALLOWED to have been burned up to today (max 12; 13th is reveal)
-function papersAllowedToBurn() {
-  if (isDemoMode) return 12;
-  return Math.min(dayNumber(), 12);
+function daysUntilStart() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = getStartDate(); start.setHours(0,0,0,0);
+  return Math.max(0, Math.round((start - today) / 864e5));
 }
 
-// Papers burned so far
-function papersBurned() {
-  return state.papers.filter(p => p.burned).length;
-}
-
-// Can the user burn at least one more paper right now?
-function canBurnMore() {
-  if (isDemoMode) return papersBurned() < 12;
-  return papersAllowedToBurn() > papersBurned();
-}
-
-// Jan 1: all 12 burns done, 1 paper left — offer early reveal
-function canEarlyReveal() {
-  if (isDemoMode) return papersBurned() >= 12;
-  return daysUntilReveal() === 1 && papersBurned() >= 12;
-}
-
-// How many burns are available right now (including catch-up)
-function burnsAvailable() {
-  if (isDemoMode) return Math.max(0, 12 - papersBurned());
-  return Math.max(0, papersAllowedToBurn() - papersBurned());
-}
-
-// Days remaining until reveal (0 = reveal day)
 function daysUntilReveal() {
   const today = new Date(); today.setHours(0,0,0,0);
   const reveal = getRevealDate(); reveal.setHours(0,0,0,0);
   return Math.max(0, Math.round((reveal - today) / 864e5));
 }
 
-// Is writing still allowed? (before solstice sunset)
-function writingOpen() {
-  if (isDemoMode) return true;
-  return new Date() < getSolsticeSunset();
+function papersAllowedToBurn() {
+  if (isDemoMode) return 12;
+  return Math.min(dayNumber(), 12);
 }
 
-// Detect phase from real date
+function papersBurned() {
+  return state.papers.filter(p => p.burned).length;
+}
+
+function canBurnMore() {
+  if (isDemoMode) return papersBurned() < 12;
+  return papersAllowedToBurn() > papersBurned();
+}
+
+function canEarlyReveal() {
+  if (isDemoMode) return papersBurned() >= 12;
+  return daysUntilReveal() === 1 && papersBurned() >= 12;
+}
+
+function burnsAvailable() {
+  if (isDemoMode) return Math.max(0, 12 - papersBurned());
+  return Math.max(0, papersAllowedToBurn() - papersBurned());
+}
+
+function writingOpen() {
+  if (isDemoMode) return true;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = getStartDate(); start.setHours(0,0,0,0);
+  return today < start;
+}
+
 function detectPhase() {
-  const now = new Date();
+  if (isDemoMode) return state.phase || 'writing';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = getStartDate(); start.setHours(0,0,0,0);
   const reveal = getRevealDate(); reveal.setHours(0,0,0,0);
-  const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
-  if (todayMidnight >= reveal) return 'reveal';
-  if (now >= getSolsticeSunset()) return 'burning';
+  if (today >= reveal) return 'reveal';
+  if (today >= start) return 'burning';
   return 'writing';
 }
 
@@ -1671,6 +1763,23 @@ function renderGrid() {
 
   const filled = state.papers.filter(p => p.text || p.folded).length;
   const folded = state.papers.filter(p => p.folded).length;
+
+  // Countdown
+  const countdown = document.getElementById('ritualCountdown');
+  if (countdown) {
+    if (!isDemoMode && state.ritualSetup) {
+      const days = daysUntilStart();
+      if (days > 0) {
+        countdown.textContent = days === 1 ? 'one night until your ritual begins' : `${days} nights until your ritual begins`;
+        countdown.classList.remove('hidden');
+      } else {
+        countdown.classList.add('hidden');
+      }
+    } else {
+      countdown.classList.add('hidden');
+    }
+  }
+
   progressText.textContent = `${filled} of 13 intentions written`;
 
   // Update keepsake box count
@@ -1678,13 +1787,13 @@ function renderGrid() {
   const boxHintEl  = document.getElementById('writingBoxHint');
   if (boxCountEl) boxCountEl.textContent = folded;
   if (boxHintEl) {
-    if (folded === 13) boxHintEl.textContent = 'All 13 intentions sealed away — ready for the solstice';
+    if (folded === 13) boxHintEl.textContent = 'All 13 intentions sealed away';
     else if (folded === 0) boxHintEl.textContent = 'Fold your intentions to tuck them inside';
     else boxHintEl.textContent = `${folded} of 13 tucked safely away`;
   }
 
   if (!writingOpen()) {
-    progressText.textContent += '  —  The solstice has passed. Your papers are sealed.';
+    progressText.textContent += '  —  Your papers are sealed.';
     return;
   }
 
@@ -1897,6 +2006,7 @@ function switchPhase(phase) {
 
   if (phase === 'writing') {
     writingPhase.classList.remove('hidden');
+    initJournal();
     phaseBadge.textContent = 'Writing';
     subtitleText.textContent = 'Set your intentions for the turning of the year';
     dayCounterEl.classList.add('hidden');
@@ -2045,11 +2155,12 @@ function playFoldAnimation(text, onComplete) {
 // ─────────────────────────────────────────────────────────────
 //  WRITING MODAL
 // ─────────────────────────────────────────────────────────────
-function openWritingModal(id) {
+function openWritingModal(id, prefillText) {
   if (!writingOpen()) return;
   editingPaperId = id;
   writingTitle.textContent = `Paper ${ROMAN[id]} — your intention`;
   writingTA.value = state.papers[id].text || '';
+  if (prefillText) writingTA.value = prefillText;
   writingModal.classList.add('open');
   setTimeout(() => writingTA.focus(), 100);
 }
@@ -2165,7 +2276,7 @@ earlyRevealConfirm.addEventListener('click', () => {
 //  JOURNAL
 // ─────────────────────────────────────────────────────────────
 function saveToJournal() {
-  const year  = getBaseYear();
+  const year  = getStartDate().getFullYear();
   const label = `${year}\u2013${year + 1}`;
   if (!state.journal.find(e => e.year === label)) {
     // featured = the one paper shown on the reveal page
@@ -2208,7 +2319,7 @@ function renderJournal() {
   content.querySelector('.journal-featured').addEventListener('click', () => openNotebookForYear(entry.year));
 }
 
-document.getElementById('journalToggle').addEventListener('click', () => {
+document.getElementById('revealJournalToggle').addEventListener('click', () => {
   const wrap = document.getElementById('journalWrap');
   wrap.classList.toggle('hidden');
   if (!wrap.classList.contains('hidden')) renderJournal();
@@ -2454,6 +2565,124 @@ function init() {
 }
 
 // ─────────────────────────────────────────────────────────────
+//  SETUP SCREEN
+// ─────────────────────────────────────────────────────────────
+function fmtDate(d) {
+  return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+}
+
+function updateSetupPreview() {
+  const val = document.getElementById('setupStartDate').value;
+  const el  = document.getElementById('setupPreview');
+  if (!val) { el.textContent = ''; return; }
+  const start   = new Date(val + 'T00:00:00');
+  const writing = new Date(start); writing.setDate(writing.getDate() - 7);
+  const reveal  = new Date(start); reveal.setDate(reveal.getDate() + 13);
+  el.innerHTML = `Writing opens <strong>${fmtDate(writing)}</strong><br>Burning begins <strong>${fmtDate(start)}</strong><br>Revealed <strong>${fmtDate(reveal)}</strong>`;
+}
+
+function showSetup() {
+  const overlay = document.getElementById('setupScreen');
+  overlay.classList.remove('hidden');
+  const dateInput = document.getElementById('setupStartDate');
+  // Suggest 8 days from now so writing opens today
+  const suggested = new Date(); suggested.setDate(suggested.getDate() + 8);
+  const todayStr = new Date().toISOString().split('T')[0];
+  dateInput.min   = todayStr;
+  dateInput.value = suggested.toISOString().split('T')[0];
+  updateSetupPreview();
+
+  const freshDate   = dateInput.cloneNode(true);
+  dateInput.parentNode.replaceChild(freshDate, dateInput);
+  const freshBegin  = document.getElementById('setupBegin').cloneNode(true);
+  document.getElementById('setupBegin').parentNode.replaceChild(freshBegin, document.getElementById('setupBegin'));
+  const freshSol    = document.getElementById('setupSolstice').cloneNode(true);
+  document.getElementById('setupSolstice').parentNode.replaceChild(freshSol, document.getElementById('setupSolstice'));
+
+  document.getElementById('setupStartDate').addEventListener('input', updateSetupPreview);
+
+  document.getElementById('setupBegin').addEventListener('click', () => {
+    const val = document.getElementById('setupStartDate').value;
+    if (!val) return;
+    state.ritualStartDate = val;
+    state.ritualSetup = true;
+    saveState();
+    document.getElementById('setupScreen').classList.add('hidden');
+    init();
+  });
+
+  document.getElementById('setupSolstice').addEventListener('click', () => {
+    const now = new Date();
+    const year = now.getMonth() >= 11 && now.getDate() >= 21 ? now.getFullYear() + 1 : now.getFullYear();
+    const solstice = `${year}-12-21`;
+    document.getElementById('setupStartDate').value = solstice;
+    updateSetupPreview();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  REFLECTION JOURNAL
+// ─────────────────────────────────────────────────────────────
+function initJournal() {
+  const toggle   = document.getElementById('journalToggle');
+  const body     = document.getElementById('journalBody');
+  const textarea = document.getElementById('journalTextarea');
+  const floatBtn = document.getElementById('intentionFloatBtn');
+
+  if (!toggle || !body || !textarea || !floatBtn) return;
+
+  // Guard against stacking listeners
+  if (toggle.dataset.init) return;
+  toggle.dataset.init = '1';
+
+  // Restore saved notes
+  textarea.value = state.journalNotes || '';
+
+  toggle.addEventListener('click', () => {
+    body.classList.toggle('hidden');
+  });
+
+  textarea.addEventListener('input', () => {
+    state.journalNotes = textarea.value;
+    saveState();
+  });
+
+  // Show float button on text selection
+  textarea.addEventListener('mouseup', positionFloatBtn);
+  textarea.addEventListener('keyup',   positionFloatBtn);
+
+  function positionFloatBtn() {
+    const sel = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
+    if (!sel) { floatBtn.classList.add('hidden'); return; }
+    const rect = textarea.getBoundingClientRect();
+    floatBtn.style.top  = (rect.top + window.scrollY - 40) + 'px';
+    floatBtn.style.left = (rect.left + rect.width / 2 - 70) + 'px';
+    floatBtn.classList.remove('hidden');
+  }
+
+  // Hide float button when clicking elsewhere
+  document.addEventListener('mousedown', e => {
+    if (e.target !== floatBtn && e.target !== textarea) {
+      floatBtn.classList.add('hidden');
+    }
+  });
+
+  floatBtn.addEventListener('click', () => {
+    const sel = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
+    if (!sel) return;
+    floatBtn.classList.add('hidden');
+    // Find next empty paper
+    const nextEmpty = state.papers.find(p => !p.text && !p.folded && !p.sealed);
+    if (!nextEmpty) {
+      // All filled — open first paper for editing
+      openWritingModal(0, sel);
+      return;
+    }
+    openWritingModal(nextEmpty.id, sel);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 //  PROFILE MODAL
 // ─────────────────────────────────────────────────────────────
 function setProfileNote(msg, isError) {
@@ -2550,6 +2779,18 @@ fbAuth.onAuthStateChanged(async (user) => {
   }
   isDemoMode = state.demoMode || false;
 
+  if (state.ritualSetup === undefined) {
+    // Migrate existing users: if they have written papers, assume Dec 21 ritual
+    const hasContent = state.papers && state.papers.some(p => p.text);
+    state.ritualSetup = hasContent;
+    if (hasContent && !state.ritualStartDate) {
+      const m = new Date().getMonth();
+      const y = m === 0 ? new Date().getFullYear() - 1 : new Date().getFullYear();
+      state.ritualStartDate = `${y}-12-21`;
+    }
+    if (state.journalNotes === undefined) state.journalNotes = '';
+  }
+
   // Update account display in settings
   const nameEl = document.getElementById('settingsAccountName');
   if (nameEl) nameEl.textContent = user.displayName ? `${user.displayName}  ·  ${user.email}` : user.email;
@@ -2561,10 +2802,15 @@ fbAuth.onAuthStateChanged(async (user) => {
   ls.classList.add('fade-out');
   setTimeout(() => { ls.style.display = 'none'; }, 900);
 
-  init();
+  if (!state.ritualSetup) {
+    showSetup();
+  } else {
+    init();
+  }
 });
 </script>
 
 <div id="pencilCursor" class="pencil-cursor">✏️</div>
+<div id="intentionFloatBtn" class="intention-float-btn hidden">↑ set as intention</div>
 </body>
 </html>

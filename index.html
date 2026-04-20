@@ -67,7 +67,7 @@
     .day-counter {
       text-align: center;
       background: rgba(201,168,76,.1);
-      border: 1px solid rgba(201,168,76,.35);
+      border: 1px solid rgba(201,168,76,.60);
       border-radius: 8px;
       padding: .35rem .7rem;
       min-width: 72px;
@@ -79,7 +79,7 @@
     }
     .counter-label { font-size: .52rem; letter-spacing: 1px; text-transform: uppercase; color: rgba(232,213,183,.82); line-height: 1.4; }
     .settings-btn {
-      background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.4);
+      background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.65);
       color: var(--gold); width: 36px; height: 36px;
       border-radius: 50%; cursor: pointer; font-size: 1rem; transition: background .2s;
     }
@@ -569,7 +569,7 @@
     }
     .envelope.last-paper:hover { transform:translateY(-8px) scale(1.15); }
     @keyframes lastGlow {
-      0%   { filter: drop-shadow(0 0 6px rgba(201,168,76,.4)); }
+      0%   { filter: drop-shadow(0 0 6px rgba(201,168,76,.65)); }
       100% { filter: drop-shadow(0 0 18px rgba(201,168,76,.85)) drop-shadow(0 0 8px rgba(255,180,50,.5)); }
     }
     .env-reveal-label {
@@ -632,7 +632,7 @@
     .settings-section h3 { font-size:.8rem; letter-spacing:2px; text-transform:uppercase; color:rgba(232,213,183,.82); margin-bottom:.75rem; }
     .option-row { display:flex; flex-wrap:wrap; gap:.5rem; }
     .opt-btn { padding:.4rem 1rem; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); color:rgba(232,213,183,.8); border-radius:3px; cursor:pointer; font-family:'Georgia',serif; font-size:.82rem; transition:all .15s; }
-    .opt-btn:hover  { background:rgba(201,168,76,.15); border-color:rgba(201,168,76,.4); }
+    .opt-btn:hover  { background:rgba(201,168,76,.15); border-color:rgba(201,168,76,.65); }
     .opt-btn.active { background:rgba(201,168,76,.25); border-color:var(--gold); color:var(--gold); }
     .color-swatch-row { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.25rem; }
     .color-swatch { width:30px; height:30px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:border-color .15s,transform .15s; }
@@ -645,8 +645,8 @@
     .btn-primary  { background:var(--ink); color:var(--paper); }
     .btn-primary:hover { background:#4a2820; }
     .btn-secondary { background:transparent; color:var(--ink); border:1px solid rgba(44,24,16,.3); }
-    .btn-gold  { background:rgba(201,168,76,.2); color:var(--gold); border:1px solid rgba(201,168,76,.4); }
-    .btn-gold:hover { background:rgba(201,168,76,.35); }
+    .btn-gold  { background:rgba(201,168,76,.2); color:var(--gold); border:1px solid rgba(201,168,76,.65); }
+    .btn-gold:hover { background:rgba(201,168,76,.60); }
     .btn-sm { font-size:.78rem; padding:.35rem .8rem; }
 
     .hidden { display:none !important; }
@@ -668,7 +668,7 @@
       transition: background .2s;
       position: relative; z-index: 10;
     }
-    .fold-btn:hover { background: rgba(201,168,76,.35); }
+    .fold-btn:hover { background: rgba(201,168,76,.60); }
 
     /* ── KEEPSAKE BOX ────────────────────────── */
     .box-section { display:flex; flex-direction:column; align-items:center; margin:1.75rem auto 0; perspective:500px; }
@@ -756,15 +756,15 @@
     }
     .login-sub {
       font-size:.7rem; letter-spacing:3px; text-transform:uppercase;
-      color:rgba(232,213,183,.7); margin-bottom:2.8rem;
+      color:rgba(232,213,183,.85); margin-bottom:2.8rem;
     }
     .login-account-list {
       display:flex; flex-wrap:wrap; justify-content:center;
       gap:.65rem; margin-bottom:1.4rem;
     }
     .login-account-btn {
-      background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.22);
-      color:rgba(232,213,183,.75); padding:.55rem 1.4rem; border-radius:3px;
+      background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.78);
+      color:rgba(232,213,183,.88); padding:.55rem 1.4rem; border-radius:3px;
       cursor:pointer; font-family:'Georgia',serif; font-size:.9rem;
       letter-spacing:1px; transition:all .2s;
     }
@@ -772,15 +772,15 @@
     .login-form { display:flex; flex-direction:column; align-items:center; gap:.85rem; }
     .login-input {
       width:100%; max-width:260px;
-      background:rgba(255,255,255,.05); border:1px solid rgba(201,168,76,.22);
+      background:rgba(255,255,255,.05); border:1px solid rgba(201,168,76,.78);
       border-radius:3px; padding:.62rem 1rem;
       color:rgba(232,213,183,.9); font-family:'Georgia',serif; font-size:.93rem;
       text-align:center; outline:none; transition:border-color .2s; letter-spacing:.5px;
     }
-    .login-input::placeholder { color:rgba(232,213,183,.5); }
-    .login-input:focus { border-color:rgba(201,168,76,.55); }
+    .login-input::placeholder { color:rgba(232,213,183,.88); }
+    .login-input:focus { border-color:rgba(201,168,76,.80); }
     .login-btn {
-      background:rgba(201,168,76,.14); border:1px solid rgba(201,168,76,.4);
+      background:rgba(201,168,76,.30); border:1px solid rgba(201,168,76,.65);
       color:var(--gold); padding:.62rem 2.4rem; border-radius:3px;
       cursor:pointer; font-family:'Georgia',serif; font-size:.88rem;
       letter-spacing:2px; text-transform:uppercase; transition:all .25s;
@@ -790,14 +790,14 @@
       background:none; border:none; cursor:pointer;
       font-family:'Georgia',serif; font-size:.67rem;
       letter-spacing:1.5px; text-transform:uppercase;
-      color:rgba(232,213,183,.55); padding:.2rem .4rem; transition:color .2s;
+      color:rgba(232,213,183,.76); padding:.2rem .4rem; transition:color .2s;
     }
     .login-new-link:hover { color:rgba(232,213,183,.85); }
     .login-note {
-      font-size:.7rem; letter-spacing:.5px; color:rgba(232,213,183,.65);
+      font-size:.7rem; letter-spacing:.5px; color:rgba(232,213,183,.82);
       margin-top:1rem; font-style:italic; min-height:1.1rem;
     }
-    .login-note.login-error { color:rgba(220,100,80,.8); }
+    .login-note.login-error { color:rgba(255,140,110,1); }
 
     /* ── SETUP SCREEN ───────────────────────────── */
     .setup-screen {
@@ -808,7 +808,7 @@
     .setup-screen.hidden { display:none; }
     .setup-content { text-align:center; width:min(420px,90vw); padding:2rem 1rem; }
     .setup-body {
-      font-size:.88rem; color:rgba(232,213,183,.72); line-height:1.7;
+      font-size:.88rem; color:rgba(232,213,183,.86); line-height:1.7;
       margin-bottom:2rem; font-style:italic;
     }
     .setup-date-wrap { display:flex; flex-direction:column; align-items:center; margin-bottom:.8rem; }
@@ -817,7 +817,7 @@
       color-scheme: dark;
     }
     .setup-preview {
-      font-size:.75rem; color:rgba(232,213,183,.55); letter-spacing:.5px;
+      font-size:.75rem; color:rgba(232,213,183,.76); letter-spacing:.5px;
       min-height:1.2rem; line-height:1.6; margin-bottom:.4rem;
     }
     .setup-preview strong { color:rgba(201,168,76,.85); }
@@ -825,7 +825,7 @@
     /* ── RITUAL COUNTDOWN ───────────────────────── */
     .ritual-countdown {
       font-size:.78rem; letter-spacing:2px; text-transform:uppercase;
-      color:rgba(201,168,76,.7); margin-bottom:1rem; text-align:center;
+      color:rgba(201,168,76,.85); margin-bottom:1rem; text-align:center;
     }
 
     /* ── REFLECTION JOURNAL ─────────────────────── */
@@ -833,13 +833,13 @@
     .journal-toggle {
       background:none; border:none; cursor:pointer;
       font-family:'Georgia',serif; font-size:.72rem; letter-spacing:2px;
-      text-transform:uppercase; color:rgba(232,213,183,.4);
+      text-transform:uppercase; color:rgba(232,213,183,.86);
       padding:.3rem 0; transition:color .2s;
     }
-    .journal-toggle:hover { color:rgba(232,213,183,.7); }
+    .journal-toggle:hover { color:rgba(232,213,183,.85); }
     .journal-body { margin-top:.9rem; }
     .journal-hint {
-      font-size:.75rem; color:rgba(232,213,183,.38); font-style:italic;
+      font-size:.75rem; color:rgba(232,213,183,.85); font-style:italic;
       margin-bottom:.65rem; letter-spacing:.3px;
     }
     .journal-textarea {
@@ -849,8 +849,8 @@
       line-height:1.75; padding:1rem 1.1rem; resize:vertical; outline:none;
       transition:border-color .2s; box-sizing:border-box;
     }
-    .journal-textarea:focus { border-color:rgba(201,168,76,.35); }
-    .journal-textarea::placeholder { color:rgba(232,213,183,.2); font-style:italic; }
+    .journal-textarea:focus { border-color:rgba(201,168,76,.60); }
+    .journal-textarea::placeholder { color:rgba(232,213,183,.76); font-style:italic; }
 
     /* ── INTENTION FLOAT BUTTON ─────────────────── */
     .intention-float-btn {
@@ -867,7 +867,7 @@
     .profile-field { margin-bottom:.85rem; }
     .profile-label {
       display:block; font-size:.68rem; letter-spacing:2px; text-transform:uppercase;
-      color:rgba(232,213,183,.5); margin-bottom:.35rem;
+      color:rgba(232,213,183,.88); margin-bottom:.35rem;
     }
     .profile-value {
       color:rgba(232,213,183,.85); font-size:.9rem; font-style:italic;
@@ -883,12 +883,12 @@
       background:none; border:none; cursor:pointer;
       font-family:'Georgia',serif; font-size:.72rem;
       letter-spacing:1.8px; text-transform:uppercase;
-      color:rgba(232,213,183,.35); padding:.2rem .5rem;
+      color:rgba(232,213,183,.85); padding:.2rem .5rem;
       transition:color .25s;
     }
-    .phase-nav-btn:hover { color:rgba(232,213,183,.7); }
+    .phase-nav-btn:hover { color:rgba(232,213,183,.85); }
     .phase-nav-btn.nav-active { color:var(--gold); }
-    .phase-nav-sep { color:rgba(232,213,183,.18); font-size:.65rem; user-select:none; }
+    .phase-nav-sep { color:rgba(232,213,183,.40); font-size:.65rem; user-select:none; }
 
     /* ── NOTEBOOK ───────────────────────────────── */
     .notebook-toggle-row { margin-top:3rem; text-align:center; }
@@ -896,10 +896,10 @@
       background:none; border:none; cursor:pointer;
       font-family:'Georgia',serif; font-size:.67rem;
       letter-spacing:1.8px; text-transform:uppercase;
-      color:rgba(232,213,183,.28); padding:.2rem .5rem;
+      color:rgba(232,213,183,.68); padding:.2rem .5rem;
       transition:color .25s;
     }
-    .notebook-toggle-btn:hover { color:rgba(232,213,183,.55); }
+    .notebook-toggle-btn:hover { color:rgba(232,213,183,.76); }
     .notebook-wrap { margin-top:.9rem; display:flex; justify-content:center; }
     .notebook {
       width:min(460px,92vw); background:#f5e8d0;
@@ -968,10 +968,10 @@
       background:none; border:none; cursor:pointer;
       font-family:'Georgia',serif; font-size:.67rem;
       letter-spacing:1.8px; text-transform:uppercase;
-      color:rgba(232,213,183,.28); padding:.2rem .5rem;
+      color:rgba(232,213,183,.68); padding:.2rem .5rem;
       transition:color .25s;
     }
-    .journal-toggle-btn:hover { color:rgba(232,213,183,.55); }
+    .journal-toggle-btn:hover { color:rgba(232,213,183,.76); }
     .journal-wrap {
       margin-top:.9rem; width:min(460px,92vw);
       border:1px solid rgba(201,168,76,.16); border-radius:4px;
@@ -980,11 +980,11 @@
     .journal-tabs { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem; }
     .journal-tab {
       background:rgba(201,168,76,.08); border:1px solid rgba(201,168,76,.2);
-      color:rgba(232,213,183,.52); padding:.2rem .65rem; border-radius:3px;
+      color:rgba(232,213,183,.88); padding:.2rem .65rem; border-radius:3px;
       cursor:pointer; font-family:'Georgia',serif; font-size:.74rem;
       transition:all .15s;
     }
-    .journal-tab.active { background:rgba(201,168,76,.22); color:var(--gold); border-color:var(--gold); }
+    .journal-tab.active { background:rgba(201,168,76,.78); color:var(--gold); border-color:var(--gold); }
     .journal-entry-row {
       padding:.5rem 0; border-bottom:1px solid rgba(201,168,76,.1);
       font-style:italic; font-size:.88rem;
@@ -993,16 +993,16 @@
     }
     .journal-entry-row:last-child { border-bottom:none; }
     .journal-entry-n {
-      color:rgba(201,168,76,.5); font-style:normal; font-size:.7rem;
+      color:rgba(201,168,76,.78); font-style:normal; font-size:.7rem;
       flex-shrink:0; padding-top:.18rem; min-width:1.3rem;
     }
     .journal-empty {
-      font-style:italic; color:rgba(232,213,183,.35);
+      font-style:italic; color:rgba(232,213,183,.85);
       font-size:.82rem; text-align:center; padding:.75rem 0;
     }
     .journal-featured {
       font-style:italic; font-size:.92rem; line-height:1.7;
-      color:rgba(232,213,183,.7); cursor:pointer; display:inline;
+      color:rgba(232,213,183,.85); cursor:pointer; display:inline;
       border-bottom:1px solid rgba(201,168,76,.25); padding-bottom:1px;
       transition:color .2s, border-color .2s;
     }
@@ -1010,7 +1010,7 @@
     .journal-featured-wrap {
       padding:.3rem 0 .5rem;
       font-size:.62rem; letter-spacing:1.5px; text-transform:uppercase;
-      color:rgba(232,213,183,.32);
+      color:rgba(232,213,183,.68);
     }
     .journal-featured-wrap small { display:block; margin-bottom:.4rem; }
 
@@ -1021,14 +1021,14 @@
     .nb-modal-close {
       position:absolute; top:-2.2rem; right:0;
       background:none; border:none;
-      color:rgba(232,213,183,.45); font-size:1.5rem;
+      color:rgba(232,213,183,.86); font-size:1.5rem;
       cursor:pointer; padding:.1rem .4rem; line-height:1;
       transition:color .2s;
     }
     .nb-modal-close:hover { color:rgba(232,213,183,.88); }
     .nb-modal-year {
       text-align:center; font-size:.67rem; letter-spacing:2px;
-      text-transform:uppercase; color:rgba(232,213,183,.38);
+      text-transform:uppercase; color:rgba(232,213,183,.85);
       margin-bottom:.65rem;
     }
   </style>
@@ -1260,7 +1260,7 @@
     <hr class="divider" />
     <div class="settings-section" style="margin-bottom:.5rem;">
       <h3>Account</h3>
-      <p style="color:rgba(232,213,183,.6);font-size:.85rem;margin-bottom:.65rem;font-style:italic;" id="settingsAccountName"></p>
+      <p style="color:rgba(232,213,183,.80);font-size:.85rem;margin-bottom:.65rem;font-style:italic;" id="settingsAccountName"></p>
       <div class="option-row">
         <button class="opt-btn btn-sm" id="editProfileBtn">Edit Profile</button>
         <button class="opt-btn btn-sm" id="logoutBtn">Sign Out</button>
@@ -1293,7 +1293,7 @@
   <div class="settings-box" style="max-width:380px;text-align:center;">
     <div style="font-size:2rem;margin-bottom:.75rem">🕯️</div>
     <h2 style="font-size:1rem;letter-spacing:1px;margin-bottom:1rem">One more night</h2>
-    <p style="font-size:.88rem;line-height:1.7;color:rgba(232,213,183,.75);font-style:italic;">
+    <p style="font-size:.88rem;line-height:1.7;color:rgba(232,213,183,.88);font-style:italic;">
       The intention of this ritual is to open your final paper<br>
       on the <strong style="color:var(--gold)">13th night — January 2nd</strong>.<br><br>
       Would you like to open it tonight instead?

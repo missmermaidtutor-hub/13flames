@@ -843,6 +843,13 @@
     }
     .setup-preview strong { color:rgba(201,168,76,.85); }
 
+    /* ── JOURNAL SKIP NOTE ──────────────────────── */
+    .journal-skip-note {
+      font-size:.75rem; color:rgba(232,213,183,.75); font-style:italic;
+      letter-spacing:.3px; text-align:center; margin:.6rem 0 .4rem;
+      max-width:860px; width:100%;
+    }
+
     /* ── RITUAL COUNTDOWN ───────────────────────── */
     .ritual-countdown {
       font-size:.78rem; letter-spacing:2px; text-transform:uppercase;
@@ -1150,6 +1157,15 @@
 
   <!-- WRITING PHASE -->
   <div class="writing-phase" id="writingPhase">
+    <div class="ritual-countdown hidden" id="ritualCountdown"></div>
+    <div class="journal-section" id="journalSection">
+      <button class="journal-toggle" id="journalToggle">◦ reflection journal</button>
+      <div class="journal-body hidden" id="journalBody">
+        <p class="journal-hint">Write freely. When something wants to become an intention, select it and press the button that appears.</p>
+        <textarea class="journal-textarea" id="journalTextarea" placeholder="What do you want to call in? What are you ready to release? What does this next chapter ask of you?"></textarea>
+      </div>
+    </div>
+    <p class="journal-skip-note">Note: if you are ready with your intentions, skip the brainstorming above and enter them directly below.</p>
     <p class="progress-text" id="progressText">0 of 13 intentions written</p>
     <div class="papers-grid" id="papersGrid"></div>
     <div class="box-section" id="writingBoxSection">
@@ -1161,14 +1177,6 @@
         </div>
       </div>
       <p class="box-hint" id="writingBoxHint">Fold your intentions to tuck them inside</p>
-    </div>
-    <div class="ritual-countdown hidden" id="ritualCountdown"></div>
-    <div class="journal-section" id="journalSection">
-      <button class="journal-toggle" id="journalToggle">◦ reflection journal</button>
-      <div class="journal-body hidden" id="journalBody">
-        <p class="journal-hint">Write freely. When something wants to become an intention, select it and press the button that appears.</p>
-        <textarea class="journal-textarea" id="journalTextarea" placeholder="What do you want to call in? What are you ready to release? What does this next chapter ask of you?"></textarea>
-      </div>
     </div>
   </div>
 

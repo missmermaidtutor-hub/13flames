@@ -1197,6 +1197,25 @@
     </div>
   </div>
 
+  <!-- READY TO RELEASE MODAL -->
+  <div class="modal-overlay" id="readyToReleaseModal">
+    <div class="modal-box" style="max-width:380px;text-align:center;">
+      <p style="font-size:1.6rem;margin-bottom:.6rem;">🕯️</p>
+      <h2 class="modal-title">All 13 intentions are sealed.</h2>
+      <p style="font-size:.88rem;color:rgba(232,213,183,.88);font-style:italic;line-height:1.7;margin:1rem 0 1.6rem;">Would you like to begin releasing one intention tonight, or wait and choose a future date to begin?</p>
+      <div class="modal-actions" style="flex-direction:column;gap:.75rem;">
+        <button class="btn btn-gold" id="releaseTonight">Begin releasing tonight</button>
+        <button class="btn btn-ghost" id="releaseLater">I'd like to wait</button>
+      </div>
+      <div id="releaseDateWrap" class="hidden" style="margin-top:1.2rem;">
+        <p style="font-size:.75rem;color:rgba(232,213,183,.82);margin-bottom:.5rem;font-style:italic;">Late fall is a beautiful time to prepare for the winter solstice.</p>
+        <input id="releaseDateInput" type="date" class="login-input" style="max-width:220px;text-align:center;color-scheme:dark;" />
+        <button class="btn btn-gold" id="releaseDateConfirm" style="margin-top:.8rem;">Set this date</button>
+      </div>
+      <p id="releaseModalNote" style="font-size:.72rem;color:rgba(232,213,183,.82);margin-top:.8rem;min-height:1rem;"></p>
+    </div>
+  </div>
+
   <!-- BURNING PHASE -->
   <div class="burning-phase hidden" id="burningPhase">
     <p class="burn-instruction" id="burnInstruction">Drag a sealed envelope to the flame to release it</p>
@@ -1836,6 +1855,11 @@ function renderGrid() {
     if (folded === 13) boxHintEl.textContent = 'All 13 intentions sealed away';
     else if (folded === 0) boxHintEl.textContent = 'Fold your intentions to tuck them inside';
     else boxHintEl.textContent = `${folded} of 13 tucked safely away`;
+  }
+
+  // All 13 sealed for the first time → prompt to begin releasing
+  if (folded === 13 && state.phase === 'writing' && !isDemoMode) {
+    setTimeout(() => showReadyToReleaseModal(), 600);
   }
 
   if (!writingOpen()) {
@@ -2771,6 +2795,62 @@ function renderJournalPast() {
       openWritingModal(nextEmpty ? nextEmpty.id : 0, text);
     });
   });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  READY TO RELEASE MODAL
+// ─────────────────────────────────────────────────────────────
+function showReadyToReleaseModal() {
+  const modal = document.getElementById('readyToReleaseModal');
+  if (!modal || modal.classList.contains('open')) return;
+
+  // Reset state
+  document.getElementById('releaseDateWrap').classList.add('hidden');
+  document.getElementById('releaseDateInput').value = '';
+  document.getElementById('releaseModalNote').textContent = '';
+
+  // Set min date on picker to tomorrow
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('releaseDateInput').min = tomorrow.toISOString().split('T')[0];
+
+  modal.classList.add('open');
+
+  // Clone buttons to prevent listener stacking
+  ['releaseTonight','releaseLater','releaseDateConfirm'].forEach(id => {
+    const el = document.getElementById(id);
+    const fresh = el.cloneNode(true);
+    el.parentNode.replaceChild(fresh, el);
+  });
+
+  document.getElementById('releaseTonight').addEventListener('click', () => {
+    const today = new Date().toISOString().split('T')[0];
+    state.ritualStartDate = today;
+    saveState();
+    modal.classList.remove('open');
+    switchPhase('burning');
+  });
+
+  document.getElementById('releaseLater').addEventListener('click', () => {
+    document.getElementById('releaseDateWrap').classList.remove('hidden');
+    document.getElementById('releaseLater').style.display = 'none';
+  });
+
+  document.getElementById('releaseDateConfirm').addEventListener('click', () => {
+    const val = document.getElementById('releaseDateInput').value;
+    if (!val) {
+      document.getElementById('releaseModalNote').textContent = 'Please choose a date.';
+      return;
+    }
+    state.ritualStartDate = val;
+    saveState();
+    modal.classList.remove('open');
+    renderGrid(); // refresh countdown
+    const d = new Date(val + 'T00:00:00');
+    const note = document.getElementById('releaseModalNote');
+    note.textContent = `Your releasing begins ${fmtDate(d)}.`;
+  });
+
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
 }
 
 // ─────────────────────────────────────────────────────────────

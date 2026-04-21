@@ -843,6 +843,22 @@
     }
     .setup-preview strong { color:rgba(201,168,76,.85); }
 
+    /* ── PAST INTENTIONS IN JOURNAL ─────────────── */
+    .journal-past { margin-top:1.4rem; }
+    .journal-past-year {
+      font-size:.65rem; letter-spacing:2.5px; text-transform:uppercase;
+      color:rgba(201,168,76,.85); margin:1.2rem 0 .5rem; border-top:1px solid rgba(201,168,76,.25);
+      padding-top:.8rem;
+    }
+    .journal-past-item {
+      font-size:.85rem; color:rgba(232,213,183,.82); font-style:italic;
+      line-height:1.65; padding:.2rem 0 .2rem .8rem;
+      border-left:2px solid rgba(201,168,76,.30);
+      margin-bottom:.4rem; cursor:pointer; transition:color .2s;
+    }
+    .journal-past-item:hover { color:rgba(232,213,183,1); border-left-color:rgba(201,168,76,.75); }
+    .journal-past-empty { font-size:.78rem; color:rgba(232,213,183,.75); font-style:italic; margin-top:.6rem; }
+
     /* ── JOURNAL SKIP NOTE ──────────────────────── */
     .journal-skip-note {
       font-size:.75rem; color:rgba(232,213,183,.75); font-style:italic;
@@ -1163,6 +1179,7 @@
       <div class="journal-body hidden" id="journalBody">
         <p class="journal-hint">Write freely. When something wants to become an intention, select it and press the button that appears.</p>
         <textarea class="journal-textarea" id="journalTextarea" placeholder="What do you want to call in? What are you ready to release? What does this next chapter ask of you?"></textarea>
+        <div class="journal-past" id="journalPast"></div>
       </div>
     </div>
     <p class="journal-skip-note">Note: if you are ready with your intentions, skip the brainstorming above and enter them directly below.</p>
@@ -2717,11 +2734,42 @@ function initJournal() {
     // Find next empty paper
     const nextEmpty = state.papers.find(p => !p.text && !p.folded && !p.sealed);
     if (!nextEmpty) {
-      // All filled — open first paper for editing
       openWritingModal(0, sel);
       return;
     }
     openWritingModal(nextEmpty.id, sel);
+  });
+
+  // Render past intentions from previous years
+  renderJournalPast();
+}
+
+function renderJournalPast() {
+  const container = document.getElementById('journalPast');
+  if (!container) return;
+  if (!state.journal || !state.journal.length) {
+    container.innerHTML = '';
+    return;
+  }
+  let html = '';
+  // Show most recent year first
+  const sorted = state.journal.slice().reverse();
+  sorted.forEach(entry => {
+    if (!entry.intentions || !entry.intentions.length) return;
+    html += `<p class="journal-past-year">${entry.year}</p>`;
+    entry.intentions.forEach(text => {
+      if (!text.trim()) return;
+      html += `<p class="journal-past-item" data-text="${text.replace(/"/g,'&quot;')}">${text}</p>`;
+    });
+  });
+  container.innerHTML = html || '';
+  // Click a past intention → open it as new intention card
+  container.querySelectorAll('.journal-past-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const text = el.dataset.text;
+      const nextEmpty = state.papers.find(p => !p.text && !p.folded && !p.sealed);
+      openWritingModal(nextEmpty ? nextEmpty.id : 0, text);
+    });
   });
 }
 

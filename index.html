@@ -212,6 +212,47 @@
     .fold-wrap.shrink-away {
       transition: transform .85s cubic-bezier(.4,0,.6,1), opacity .6s ease-in;
     }
+    /* ── SECOND FOLD (right half folds over left) ─── */
+    .fold-panel2 {
+      position: absolute; top: 0; right: 0;
+      width: 160px; height: 210px;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      display: none;
+    }
+    .fold-panel2-front {
+      position: absolute; inset: 0;
+      background: #e2cfa0;
+      backface-visibility: hidden;
+    }
+    .fold-panel2-back {
+      position: absolute; inset: 0;
+      background: #f4e4c1;
+      background-image: repeating-linear-gradient(transparent,transparent 27px,rgba(180,140,100,.3) 27px,rgba(180,140,100,.3) 28px);
+      backface-visibility: hidden;
+      transform: rotateY(180deg);
+    }
+    /* ── WAX SEAL ────────────────────────────────── */
+    .fold-seal {
+      position: absolute;
+      width: 36px; height: 36px;
+      left: 80px; top: 105px; /* center of the left-half visible area */
+      transform: translate(-50%, -50%);
+      z-index: 10; pointer-events: none;
+    }
+    .fold-seal.hidden { display: none; }
+    .fold-seal-inner {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: radial-gradient(circle at 38% 32%, rgba(235,195,75,1) 0%, rgba(185,135,25,1) 55%, rgba(145,105,10,1) 100%);
+      box-shadow: 0 2px 10px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.25);
+      transform: scale(0);
+    }
+    @keyframes sealStamp {
+      0%   { transform: scale(1.9); opacity:0; }
+      45%  { transform: scale(0.82); opacity:1; }
+      70%  { transform: scale(1.1); }
+      100% { transform: scale(1.0); }
+    }
     /* Box glow when paper lands — applied to .box-body */
     @keyframes boxFlash {
       0%   { box-shadow: 0 8px 28px rgba(0,0,0,.8); }
@@ -1350,6 +1391,15 @@
       </div>
       <div class="fold-bot-back"></div>
     </div>
+    <!-- Second fold: right half folds over left -->
+    <div class="fold-panel2" id="foldPanel2">
+      <div class="fold-panel2-front"></div>
+      <div class="fold-panel2-back"></div>
+    </div>
+    <!-- Wax seal -->
+    <div class="fold-seal hidden" id="foldSeal">
+      <div class="fold-seal-inner" id="foldSealInner"></div>
+    </div>
   </div>
 </div>
 
@@ -2150,46 +2200,89 @@ function renderReveal() {
 //  FOLD ANIMATION
 // ─────────────────────────────────────────────────────────────
 function playFoldAnimation(text, onComplete) {
-  const overlay  = document.getElementById('foldOverlay');
-  const wrap     = document.getElementById('foldWrap');
-  const botHalf  = document.getElementById('foldBotHalf');
-  const textTop  = document.getElementById('foldTextTop');
-  const textBot  = document.getElementById('foldTextBot');
+  const overlay   = document.getElementById('foldOverlay');
+  const wrap      = document.getElementById('foldWrap');
+  const botHalf   = document.getElementById('foldBotHalf');
+  const panel2    = document.getElementById('foldPanel2');
+  const seal      = document.getElementById('foldSeal');
+  const sealInner = document.getElementById('foldSealInner');
+  const textTop   = document.getElementById('foldTextTop');
+  const textBot   = document.getElementById('foldTextBot');
 
-  // Split text across both halves (top shows first half, bottom shows second)
+  // Split text across both halves
   const lines = text.split('\n');
   const midLine = Math.ceil(lines.length / 2);
   textTop.textContent = lines.slice(0, midLine).join('\n');
   textBot.textContent = lines.slice(midLine).join('\n') || '';
 
-  // Reset state
+  // Full reset
   wrap.classList.remove('shrink-away');
-  wrap.style.transform = '';
-  wrap.style.opacity = '';
-  botHalf.style.transition = '';
-  botHalf.style.transform = 'rotateX(0deg)';
+  wrap.style.cssText = '';
+  botHalf.style.cssText = '';
+  panel2.style.display = 'none';
+  panel2.style.transition = '';
+  panel2.style.transform = '';
+  seal.classList.add('hidden');
+  sealInner.style.animation = 'none';
+  sealInner.style.transform = 'scale(0)';
 
-  overlay.classList.remove('hidden');
-
-  // Helper: get the writing-phase keepsake box lid + body
   function getBoxEls() {
     const sec = document.getElementById('writingBoxSection');
     return sec ? { lid: sec.querySelector('.box-lid'), body: sec.querySelector('.box-body') } : {};
   }
 
-  // Phase 1 — longer pause so user sees their words, then slow fold
+  // Phase 0 — paper floats in from a slight tilt, settles
+  wrap.style.transform = 'rotateX(-10deg) rotateZ(-3deg) scale(0.9)';
+  wrap.style.opacity = '0';
+  overlay.classList.remove('hidden');
   setTimeout(() => {
-    botHalf.style.transition = 'transform 1.2s cubic-bezier(.42,0,.58,1)';
-    botHalf.style.transform  = 'rotateX(-180deg)';
-  }, 600);
+    wrap.style.transition = 'transform 0.7s ease-out, opacity 0.5s ease';
+    wrap.style.transform  = 'rotateZ(2deg)'; // slight hand-tilt, stays through first fold
+    wrap.style.opacity    = '1';
+  }, 30);
 
-  // Phase 2 — open box lid as paper prepares to descend
+  // Phase 1 — first fold: bottom half up over top
+  setTimeout(() => {
+    botHalf.style.transition = 'transform 1.1s cubic-bezier(.42,0,.58,1)';
+    botHalf.style.transform  = 'rotateX(-180deg)';
+  }, 750);
+
+  // Phase 1.5 — crease press: slight scale-down then release, also straighten tilt
+  setTimeout(() => {
+    wrap.style.transition = 'transform 0.13s ease-out';
+    wrap.style.transform  = 'rotateZ(2deg) scale(0.96)';
+    setTimeout(() => {
+      wrap.style.transition = 'transform 0.28s ease-out';
+      wrap.style.transform  = 'rotateZ(0deg) scale(1.0)';
+    }, 130);
+  }, 2000);
+
+  // Phase 2 — second fold: right half over left
+  setTimeout(() => {
+    panel2.style.display    = 'block';
+    panel2.style.transform  = 'translateZ(3px) rotateY(0deg)';
+    panel2.style.transition = '';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      panel2.style.transition = 'transform 1.0s cubic-bezier(.42,0,.58,1)';
+      panel2.style.transform  = 'translateZ(3px) rotateY(-180deg)';
+    }));
+  }, 2450);
+
+  // Phase 2.5 — wax seal stamps onto folded paper
+  setTimeout(() => {
+    seal.classList.remove('hidden');
+    sealInner.style.animation = 'none';
+    void sealInner.offsetWidth;
+    sealInner.style.animation = 'sealStamp 0.55s cubic-bezier(.215,.61,.355,1) forwards';
+  }, 3560);
+
+  // Phase 3 — box lid opens
   setTimeout(() => {
     const { lid } = getBoxEls();
     if (lid) lid.classList.add('open');
-  }, 2100);
+  }, 3900);
 
-  // Phase 3 — paper flies into box
+  // Phase 4 — paper flies into box with a gentle spin
   setTimeout(() => {
     const boxSection = document.getElementById('writingBoxSection');
     const boxRect    = boxSection ? boxSection.getBoundingClientRect() : null;
@@ -2197,29 +2290,32 @@ function playFoldAnimation(text, onComplete) {
     const screenCY   = window.innerHeight / 2;
     const dx = boxRect ? (boxRect.left + boxRect.width  / 2) - screenCX : 0;
     const dy = boxRect ? (boxRect.top  + boxRect.height / 2) - screenCY : 80;
-
     wrap.classList.add('shrink-away');
-    wrap.style.transform = `translate(${dx}px, ${dy}px) scale(0.06)`;
+    wrap.style.transform = `translate(${dx}px, ${dy}px) rotateZ(18deg) scale(0.06)`;
     wrap.style.opacity   = '0';
-  }, 2500);
+  }, 4100);
 
-  // Phase 4 — paper lands, close lid, flash box
+  // Phase 5 — paper lands, close lid, flash box
   setTimeout(() => {
     const { lid, body } = getBoxEls();
     if (lid)  lid.classList.remove('open');
     if (body) { body.classList.remove('box-flash'); void body.offsetWidth; body.classList.add('box-flash'); }
-  }, 3200);
+  }, 4800);
 
-  // Done — hide overlay and callback
+  // Done — reset and callback
   setTimeout(() => {
     overlay.classList.add('hidden');
     wrap.classList.remove('shrink-away');
-    wrap.style.transform = '';
-    wrap.style.opacity   = '';
-    botHalf.style.transition = '';
-    botHalf.style.transform  = 'rotateX(0deg)';
+    wrap.style.cssText = '';
+    botHalf.style.cssText = '';
+    panel2.style.display = 'none';
+    panel2.style.transition = '';
+    panel2.style.transform = '';
+    seal.classList.add('hidden');
+    sealInner.style.animation = 'none';
+    sealInner.style.transform = 'scale(0)';
     onComplete();
-  }, 3600);
+  }, 5200);
 }
 
 // ─────────────────────────────────────────────────────────────

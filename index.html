@@ -2525,7 +2525,7 @@ function openNotebookForYear(yearLabel) {
 // ─────────────────────────────────────────────────────────────
 //  LOGIN  (Firebase Auth)
 // ─────────────────────────────────────────────────────────────
-let loginMode = 'signin'; // 'signin' | 'signup'
+let loginMode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'forgot-sent'
 
 function fbErrorMsg(code) {
   const map = {
@@ -2549,24 +2549,44 @@ function setLoginNote(msg, isError) {
 function setLoginMode(mode) {
   loginMode = mode;
   const name   = document.getElementById('loginName');
+  const pass   = document.getElementById('loginPass');
   const conf   = document.getElementById('loginPassConfirm');
   const enter  = document.getElementById('loginEnter');
   const toggle = document.getElementById('loginToggle');
   const forgot = document.getElementById('loginForgot');
   if (mode === 'signup') {
     name.classList.remove('hidden');
+    pass.classList.remove('hidden');
     conf.classList.remove('hidden');
+    enter.classList.remove('hidden');
     enter.textContent  = 'Create Your Space';
     toggle.textContent = 'already have a space?  sign in';
     forgot.classList.add('hidden');
-  } else {
+  } else if (mode === 'forgot') {
     name.classList.add('hidden');
+    pass.classList.add('hidden');
     conf.classList.add('hidden');
+    enter.classList.remove('hidden');
+    enter.textContent  = 'Send Reset Link';
+    toggle.textContent = '← back to sign in';
+    forgot.classList.add('hidden');
+  } else if (mode === 'forgot-sent') {
+    name.classList.add('hidden');
+    pass.classList.add('hidden');
+    conf.classList.add('hidden');
+    enter.classList.add('hidden');
+    toggle.textContent = '← back to sign in';
+    forgot.classList.add('hidden');
+  } else { // signin
+    name.classList.add('hidden');
+    pass.classList.remove('hidden');
+    conf.classList.add('hidden');
+    enter.classList.remove('hidden');
     enter.textContent  = 'Enter';
     toggle.textContent = 'new here? \u00a0create your space';
     forgot.classList.remove('hidden');
   }
-  setLoginNote('', false);
+  if (mode !== 'forgot-sent') setLoginNote('', false);
 }
 
 function showLogin() {
@@ -2587,14 +2607,19 @@ function showLogin() {
     const pass  = document.getElementById('loginPass').value;
     const conf  = document.getElementById('loginPassConfirm').value;
     if (!email) { setLoginNote('please enter your email', true); return; }
-    if (!pass)  { setLoginNote('please enter your passphrase', true); return; }
-    setLoginNote(loginMode === 'signup' ? 'creating your space…' : 'entering…', false);
+    if (!pass && loginMode !== 'forgot') { setLoginNote('please enter your passphrase', true); return; }
+    setLoginNote(loginMode === 'signup' ? 'creating your space…' : loginMode === 'forgot' ? 'sending reset link…' : 'entering…', false);
     try {
       if (loginMode === 'signup') {
         if (pass !== conf) { setLoginNote('passphrases don\'t match', true); return; }
         const name = document.getElementById('loginName').value.trim();
         const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
         if (name) await cred.user.updateProfile({ displayName: name });
+      } else if (loginMode === 'forgot') {
+        await fbAuth.sendPasswordResetEmail(email);
+        setLoginMode('forgot-sent');
+        setLoginNote('a reset link is on its way — check your email, then return here to sign in', false);
+        return;
       } else {
         await fbAuth.signInWithEmailAndPassword(email, pass);
       }
@@ -2611,16 +2636,17 @@ function showLogin() {
     });
 
   document.getElementById('loginEnter').addEventListener('click', attempt);
-  document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPass').focus(); });
+  document.getElementById('loginEmail').addEventListener('keydown', e => { if(e.key==='Enter') { if(loginMode==='forgot') attempt(); else document.getElementById('loginPass').focus(); } });
   document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') { if(loginMode==='signup') document.getElementById('loginPassConfirm').focus(); else attempt(); } });
   document.getElementById('loginPassConfirm').addEventListener('keydown', e => { if(e.key==='Enter') attempt(); });
-  document.getElementById('loginToggle').addEventListener('click', () => setLoginMode(loginMode==='signin'?'signup':'signin'));
-  document.getElementById('loginForgot').addEventListener('click', async () => {
-    const email = document.getElementById('loginEmail').value.trim();
-    if (!email) { setLoginNote('enter your email first', true); return; }
-    try { await fbAuth.sendPasswordResetEmail(email); setLoginNote('reset link sent to your email', false); }
-    catch(e) { setLoginNote(fbErrorMsg(e.code), true); }
+  document.getElementById('loginToggle').addEventListener('click', () => {
+    if (loginMode === 'forgot' || loginMode === 'forgot-sent') {
+      setLoginMode('signin');
+    } else {
+      setLoginMode(loginMode === 'signin' ? 'signup' : 'signin');
+    }
   });
+  document.getElementById('loginForgot').addEventListener('click', () => setLoginMode('forgot'));
 }
 
 // ─────────────────────────────────────────────────────────────

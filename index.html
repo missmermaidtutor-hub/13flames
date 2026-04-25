@@ -2758,14 +2758,15 @@ function initJournal() {
   });
 
   // Show float button on text selection
-  textarea.addEventListener('mouseup', positionFloatBtn);
+  textarea.addEventListener('mouseup', () => setTimeout(positionFloatBtn, 10));
   textarea.addEventListener('keyup',   positionFloatBtn);
+  textarea.addEventListener('touchend', () => setTimeout(positionFloatBtn, 10));
 
   function positionFloatBtn() {
     const sel = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
     if (!sel) { floatBtn.classList.add('hidden'); return; }
     const rect = textarea.getBoundingClientRect();
-    floatBtn.style.top  = (rect.top + window.scrollY - 40) + 'px';
+    floatBtn.style.top  = (rect.top - 44) + 'px';
     floatBtn.style.left = (rect.left + rect.width / 2 - 70) + 'px';
     floatBtn.classList.remove('hidden');
   }

@@ -984,7 +984,7 @@
     .nb-rub-hint {
       position:absolute; bottom:1rem; right:1.3rem;
       font-size:.6rem; letter-spacing:2px; text-transform:uppercase;
-      color:rgba(44,24,16,.38); pointer-events:none; transition:opacity .5s;
+      color:rgba(44,24,16,.68); pointer-events:none; transition:opacity .5s;
     }
     .nb-nav {
       display:flex; align-items:center; justify-content:center;
@@ -2765,8 +2765,9 @@ function initJournal() {
   function positionFloatBtn() {
     const sel = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
     if (!sel) { floatBtn.classList.add('hidden'); return; }
+    floatBtn.dataset.pendingSel = sel; // cache before click loses selection
     const rect = textarea.getBoundingClientRect();
-    floatBtn.style.top  = (rect.top - 44) + 'px';
+    floatBtn.style.top  = (rect.bottom + 8) + 'px';
     floatBtn.style.left = (rect.left + rect.width / 2 - 70) + 'px';
     floatBtn.classList.remove('hidden');
   }
@@ -2779,7 +2780,7 @@ function initJournal() {
   });
 
   floatBtn.addEventListener('click', () => {
-    const sel = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
+    const sel = floatBtn.dataset.pendingSel || textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
     if (!sel) return;
     floatBtn.classList.add('hidden');
     // Find next empty paper

@@ -974,6 +974,12 @@
     .phase-nav-btn:hover { color:rgba(232,213,183,.85); }
     .phase-nav-btn.nav-active { color:var(--gold); }
     .phase-nav-sep { color:rgba(232,213,183,.40); font-size:.65rem; user-select:none; }
+    .phase-guard-note {
+      font-size:.72rem; font-style:italic; letter-spacing:.4px;
+      color:rgba(232,213,183,.9); text-align:center;
+      margin:.5rem 0 0; transition:opacity .6s;
+    }
+    .phase-guard-note.hidden { display:none; }
 
     /* ── NOTEBOOK ───────────────────────────────── */
     .notebook-toggle-row { margin-top:3rem; text-align:center; }
@@ -1211,6 +1217,7 @@
     <span class="phase-nav-sep">·</span>
     <button class="phase-nav-btn" data-phase="reveal">Reveal</button>
   </nav>
+  <p id="phaseGuardNote" class="phase-guard-note hidden"></p>
 
   <!-- WRITING PHASE -->
   <div class="writing-phase" id="writingPhase">
@@ -1600,6 +1607,7 @@ function burnsAvailable() {
 
 function writingOpen() {
   if (isDemoMode) return true;
+  if (state.phase === 'writing') return true; // always allow writing while in writing phase
   const today = new Date(); today.setHours(0,0,0,0);
   const start = getStartDate(); start.setHours(0,0,0,0);
   return today < start;
@@ -2413,10 +2421,47 @@ document.getElementById('demoReset').addEventListener('click', () => {
 });
 
 // Phase nav
+let phaseGuardTimer = null;
+function showPhaseGuardNote(msg) {
+  const el = document.getElementById('phaseGuardNote');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  el.style.opacity = '1';
+  clearTimeout(phaseGuardTimer);
+  phaseGuardTimer = setTimeout(() => {
+    el.style.opacity = '0';
+    setTimeout(() => el.classList.add('hidden'), 650);
+  }, 4500);
+}
+
 document.querySelectorAll('.phase-nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    isDemoMode = true; state.demoMode = true; saveState();
-    switchPhase(btn.dataset.phase);
+    const target = btn.dataset.phase;
+
+    // Demo mode: switch freely
+    if (isDemoMode) { switchPhase(target); return; }
+
+    // Guard: Releasing requires all 13 intentions written
+    if (target === 'burning') {
+      const written = state.papers.filter(p => p.text).length;
+      if (written < 13) {
+        const left = 13 - written;
+        showPhaseGuardNote(`${left} intention${left === 1 ? '' : 's'} still waiting to be written — finish them before beginning your release.`);
+        return;
+      }
+    }
+
+    // Guard: Reveal requires 12 intentions burned
+    if (target === 'reveal') {
+      const burned = state.papers.filter(p => p.burned).length;
+      if (burned < 12) {
+        const left = 12 - burned;
+        showPhaseGuardNote(`${left} more intention${left === 1 ? '' : 's'} to release before your reveal.`);
+        return;
+      }
+    }
+
+    switchPhase(target);
   });
 });
 

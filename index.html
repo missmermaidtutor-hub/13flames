@@ -1520,6 +1520,7 @@ function defaultState() {
     ritualStartDate: null,
     ritualSetup: false,
     journalNotes: '',
+    releasePrompted: false,
   };
 }
 let state = defaultState(); // placeholder until user logs in
@@ -1915,8 +1916,10 @@ function renderGrid() {
     else boxHintEl.textContent = `${folded} of 13 tucked safely away`;
   }
 
-  // All 13 sealed for the first time → prompt to begin releasing
-  if (folded === 13 && state.phase === 'writing' && !isDemoMode) {
+  // All 13 sealed for the first time → prompt to begin releasing (once only)
+  if (folded === 13 && state.phase === 'writing' && !isDemoMode && !state.releasePrompted) {
+    state.releasePrompted = true;
+    saveState();
     setTimeout(() => showReadyToReleaseModal(), 600);
   }
 
@@ -2298,6 +2301,7 @@ function playFoldAnimation(text, onComplete) {
     const screenCY   = window.innerHeight / 2;
     const dx = boxRect ? (boxRect.left + boxRect.width  / 2) - screenCX : 0;
     const dy = boxRect ? (boxRect.top  + boxRect.height / 2) - screenCY : 80;
+    wrap.style.transition = ''; // clear inline transition so shrink-away class takes effect
     wrap.classList.add('shrink-away');
     wrap.style.transform = `translate(${dx}px, ${dy}px) rotateZ(18deg) scale(0.06)`;
     wrap.style.opacity   = '0';
@@ -2913,9 +2917,9 @@ function initJournal() {
     floatBtn.classList.remove('hidden');
   }
 
-  // Hide float button when clicking elsewhere
-  document.addEventListener('mousedown', e => {
-    if (e.target !== floatBtn && e.target !== textarea) {
+  // Hide float button when interacting elsewhere
+  document.addEventListener('pointerdown', e => {
+    if (!floatBtn.contains(e.target) && e.target !== textarea) {
       floatBtn.classList.add('hidden');
     }
   });
